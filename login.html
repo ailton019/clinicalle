@@ -7,6 +7,177 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .password-strength {
+            margin-top: 8px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .password-strength-text {
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .strength-weak { background: #ef4444; width: 25%; }
+        .strength-medium { background: #f59e0b; width: 50%; }
+        .strength-strong { background: #10b981; width: 75%; }
+        .strength-very-strong { background: #059669; width: 100%; }
+        
+        .text-weak { color: #ef4444; }
+        .text-medium { color: #f59e0b; }
+        .text-strong { color: #10b981; }
+        .text-very-strong { color: #059669; }
+        
+        .terms-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .terms-checkbox input {
+            width: auto;
+        }
+        
+        .btn-google {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        
+        .btn-google:hover {
+            background: #f9fafb;
+            border-color: var(--primary-color);
+        }
+        
+        .btn-google i {
+            color: #db4437;
+            font-size: 18px;
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #e5e7eb;
+        }
+        
+        .divider::before {
+            left: 0;
+        }
+        
+        .divider::after {
+            right: 0;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 10px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1100;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body class="login-page">
     <div class="login-container">
@@ -19,31 +190,418 @@
                 <p class="subtitle">Sistema de Gestão Completo</p>
             </div>
             
-            <form id="loginForm" class="login-form">
-                <div class="input-group">
-                    <label><i class="fas fa-envelope"></i> E-mail</label>
-                    <input type="email" id="email" placeholder="seu@email.com" required>
-                </div>
-                
-                <div class="input-group">
-                    <label><i class="fas fa-lock"></i> Senha</label>
-                    <input type="password" id="password" placeholder="••••••••" required>
-                </div>
-                
-                <button type="submit" class="btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Entrar
-                </button>
-            </form>
+            <!-- Tab Buttons -->
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="login">Entrar</button>
+                <button class="tab-btn" data-tab="register">Criar Conta</button>
+            </div>
             
-            <div class="login-footer">
-                <a href="#" id="forgotPassword">Esqueceu a senha?</a>
-                <a href="#" id="registerLink">Criar conta</a>
+            <!-- Login Tab -->
+            <div id="loginTab" class="tab-content active">
+                <form id="loginForm" class="login-form">
+                    <div class="input-group">
+                        <label><i class="fas fa-envelope"></i> E-mail</label>
+                        <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label><i class="fas fa-lock"></i> Senha</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>ou</span>
+                </div>
+                
+                <button class="btn-google" id="googleLoginBtn">
+                    <i class="fab fa-google"></i> Continuar com Google
+                </button>
+                
+                <div class="login-footer">
+                    <a href="#" id="forgotPasswordLink">Esqueceu a senha?</a>
+                </div>
+            </div>
+            
+            <!-- Register Tab -->
+            <div id="registerTab" class="tab-content">
+                <form id="registerForm" class="login-form">
+                    <div class="input-group">
+                        <label><i class="fas fa-user"></i> Nome Completo</label>
+                        <input type="text" id="registerNome" placeholder="Seu nome completo" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label><i class="fas fa-envelope"></i> E-mail</label>
+                        <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label><i class="fas fa-phone"></i> Telefone</label>
+                        <input type="tel" id="registerTelefone" placeholder="(11) 99999-9999">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label><i class="fas fa-lock"></i> Senha</label>
+                        <input type="password" id="registerPassword" placeholder="Crie uma senha" required>
+                        <div class="password-strength">
+                            <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                        </div>
+                        <span class="password-strength-text" id="passwordStrengthText"></span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label><i class="fas fa-lock"></i> Confirmar Senha</label>
+                        <input type="password" id="registerConfirmPassword" placeholder="Confirme sua senha" required>
+                    </div>
+                    
+                    <div class="terms-checkbox">
+                        <input type="checkbox" id="acceptTerms" required>
+                        <label for="acceptTerms">Li e aceito os <a href="#" id="termsLink">Termos de Uso</a></label>
+                    </div>
+                    
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-user-plus"></i> Criar Conta
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>ou</span>
+                </div>
+                
+                <button class="btn-google" id="googleRegisterBtn">
+                    <i class="fab fa-google"></i> Cadastrar com Google
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Recuperar Senha -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Recuperar Senha</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Digite seu e-mail para receber o link de recuperação de senha.</p>
+                <form id="resetPasswordForm">
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label><i class="fas fa-envelope"></i> E-mail</label>
+                        <input type="email" id="resetEmail" placeholder="seu@email.com" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeResetModal()">Cancelar</button>
+                <button class="btn-primary" onclick="sendResetLink()">Enviar Link</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Termos de Uso -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Termos de Uso</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <h4>1. Aceitação dos Termos</h4>
+                <p>Ao utilizar o sistema Clínica Estética ERP, você concorda com estes termos de uso.</p>
+                
+                <h4>2. Cadastro</h4>
+                <p>Você é responsável por manter suas informações de cadastro atualizadas e confidenciais.</p>
+                
+                <h4>3. Uso do Sistema</h4>
+                <p>O sistema é destinado exclusivamente para gestão de clínicas de estética.</p>
+                
+                <h4>4. Privacidade</h4>
+                <p>Seus dados são protegidos conforme a Lei Geral de Proteção de Dados (LGPD).</p>
+                
+                <h4>5. Cancelamento</h4>
+                <p>Você pode cancelar sua conta a qualquer momento entrando em contato com o suporte.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeTermsModal()">Li e Aceito</button>
             </div>
         </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-client.js"></script>
-    <script src="js/auth.js"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Update active states
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tab}Tab`).classList.add('active');
+            });
+        });
+        
+        // Password strength checker
+        const passwordInput = document.getElementById('registerPassword');
+        if (passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+                const strengthBar = document.getElementById('passwordStrengthBar');
+                const strengthText = document.getElementById('passwordStrengthText');
+                
+                let strength = 0;
+                let message = '';
+                
+                if (password.length >= 8) strength++;
+                if (password.match(/[a-z]/)) strength++;
+                if (password.match(/[A-Z]/)) strength++;
+                if (password.match(/[0-9]/)) strength++;
+                if (password.match(/[^a-zA-Z0-9]/)) strength++;
+                
+                switch(strength) {
+                    case 0:
+                    case 1:
+                        message = 'Senha fraca';
+                        strengthBar.className = 'password-strength-bar strength-weak';
+                        strengthText.className = 'password-strength-text text-weak';
+                        break;
+                    case 2:
+                    case 3:
+                        message = 'Senha média';
+                        strengthBar.className = 'password-strength-bar strength-medium';
+                        strengthText.className = 'password-strength-text text-medium';
+                        break;
+                    case 4:
+                        message = 'Senha forte';
+                        strengthBar.className = 'password-strength-bar strength-strong';
+                        strengthText.className = 'password-strength-text text-strong';
+                        break;
+                    case 5:
+                        message = 'Senha muito forte';
+                        strengthBar.className = 'password-strength-bar strength-very-strong';
+                        strengthText.className = 'password-strength-text text-very-strong';
+                        break;
+                }
+                
+                strengthText.textContent = message;
+            });
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast`;
+            toast.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#f59e0b'}`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}" 
+                   style="color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#f59e0b'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        // Login function
+        async function login(email, password) {
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email,
+                    password
+                });
+                
+                if (error) throw error;
+                
+                if (data.user) {
+                    showToast('Login realizado com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+        
+        // Register function
+        async function register(nome, email, telefone, password) {
+            try {
+                // Check if passwords match
+                const confirmPassword = document.getElementById('registerConfirmPassword').value;
+                if (password !== confirmPassword) {
+                    showToast('As senhas não coincidem', 'error');
+                    return;
+                }
+                
+                // Check terms
+                if (!document.getElementById('acceptTerms').checked) {
+                    showToast('Você precisa aceitar os termos de uso', 'error');
+                    return;
+                }
+                
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            nome: nome,
+                            telefone: telefone
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                if (data.user) {
+                    // Create profile in profiles table
+                    await supabaseClient
+                        .from('profiles')
+                        .insert([{
+                            id: data.user.id,
+                            nome: nome,
+                            email: email,
+                            telefone: telefone
+                        }]);
+                    
+                    showToast('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar.', 'success');
+                    
+                    // Clear form and switch to login tab
+                    document.getElementById('registerForm').reset();
+                    document.querySelector('.tab-btn[data-tab="login"]').click();
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+        
+        // Reset password function
+        async function resetPassword(email) {
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/update-password.html`
+                });
+                
+                if (error) throw error;
+                
+                showToast('Link de recuperação enviado! Verifique seu e-mail.', 'success');
+                closeResetModal();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+        
+        // Google login
+        async function loginWithGoogle() {
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/dashboard.html'
+                    }
+                });
+                
+                if (error) throw error;
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            login(email, password);
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('registerNome').value;
+            const email = document.getElementById('registerEmail').value;
+            const telefone = document.getElementById('registerTelefone').value;
+            const password = document.getElementById('registerPassword').value;
+            register(nome, email, telefone, password);
+        });
+        
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            loginWithGoogle();
+        });
+        
+        document.getElementById('googleRegisterBtn').addEventListener('click', () => {
+            loginWithGoogle();
+        });
+        
+        // Modal functions
+        const resetModal = document.getElementById('resetPasswordModal');
+        const termsModal = document.getElementById('termsModal');
+        
+        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            resetModal.style.display = 'flex';
+        });
+        
+        document.getElementById('termsLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            termsModal.style.display = 'flex';
+        });
+        
+        function closeResetModal() {
+            resetModal.style.display = 'none';
+            document.getElementById('resetEmail').value = '';
+        }
+        
+        function sendResetLink() {
+            const email = document.getElementById('resetEmail').value;
+            if (email) {
+                resetPassword(email);
+            } else {
+                showToast('Digite seu e-mail', 'error');
+            }
+        }
+        
+        function closeTermsModal() {
+            termsModal.style.display = 'none';
+            document.getElementById('acceptTerms').checked = true;
+        }
+        
+        // Close modals when clicking on X
+        document.querySelectorAll('.close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', () => {
+                closeBtn.closest('.modal').style.display = 'none';
+            });
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+        
+        // Check if user is already logged in
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && window.location.pathname.includes('login.html')) {
+                window.location.href = 'dashboard.html';
+            }
+        }
+        
+        checkSession();
+    </script>
 </body>
 </html>
