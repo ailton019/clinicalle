@@ -1,3 +1,46 @@
+// Função de salvar venda
+async function salvarVenda(e) {
+    e.preventDefault();
+    
+    const vendaData = {
+        client_id: document.getElementById('saleClient')?.value,
+        product_id: document.getElementById('saleProduct')?.value,
+        quantity: parseInt(document.getElementById('saleQuantity')?.value) || 1,
+        value: parseFloat((document.getElementById('saleUnitValue')?.value || '0').replace(',', '.')),
+        sale_date: document.getElementById('saleDate')?.value,
+        total_value: 0,
+        created_at: new Date().toISOString()
+    };
+    
+    vendaData.total_value = vendaData.quantity * vendaData.value;
+    
+    // Validações
+    if (!vendaData.client_id) { alert('Selecione um cliente!'); return false; }
+    if (!vendaData.product_id) { alert('Selecione um produto!'); return false; }
+    
+    console.log('📤 Enviando venda:', vendaData);
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('sales')
+            .insert(vendaData)
+            .select();
+        
+        console.log('✅ Resultado:', data, error);
+        
+        if (error) throw error;
+        
+        alert('✅ Venda registrada com sucesso!');
+        closeModal('saleModal');
+        await carregarVendas();
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        alert('Erro ao registrar venda: ' + error.message);
+    }
+    
+    return false;
+}
 // js/sales.js - Módulo de Vendas Simplificado
 console.log('📦 Carregando sales.js...');
 

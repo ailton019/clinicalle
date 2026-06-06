@@ -1,6 +1,51 @@
 // js/expenses.js - Módulo de Despesas
 // Gerencia despesas fixas e variáveis com categorias personalizadas
-
+// Função de salvar despesa
+async function handleExpenseSubmit(e) {
+    e.preventDefault();
+    
+    const typeRadio = document.querySelector('input[name="expenseType"]:checked');
+    let category = document.getElementById('expenseCategory')?.value;
+    const customCategory = document.getElementById('customCategory')?.value?.trim();
+    
+    if (category === 'outros' && customCategory) {
+        category = customCategory;
+    }
+    
+    const expenseData = {
+        type: typeRadio?.value || 'variable',
+        category: category,
+        description: document.getElementById('expenseDescription')?.value?.trim(),
+        value: parseFloat((document.getElementById('expenseValue')?.value || '0').replace(',', '.')),
+        date: document.getElementById('expenseDate')?.value,
+        observation: document.getElementById('expenseObservation')?.value?.trim() || null,
+        created_at: new Date().toISOString()
+    };
+    
+    if (!expenseData.description) { alert('Descrição é obrigatória!'); return; }
+    if (!expenseData.value) { alert('Valor é obrigatório!'); return; }
+    
+    console.log('📤 Enviando despesa:', expenseData);
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('expenses')
+            .insert(expenseData)
+            .select();
+        
+        console.log('✅ Resultado:', data, error);
+        
+        if (error) throw error;
+        
+        alert('✅ Despesa registrada!');
+        closeExpenseModal();
+        await refreshExpensesList();
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        alert('Erro ao salvar: ' + error.message);
+    }
+}
 // Variáveis globais do módulo
 let expensesList = [];
 let editingExpenseId = null;

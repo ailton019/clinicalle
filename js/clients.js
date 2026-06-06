@@ -1,3 +1,57 @@
+// Função de salvar cliente - VERIFIQUE se está assim:
+async function handleClientSubmit(e) {
+    e.preventDefault();
+    
+    const clientId = document.getElementById('clientId')?.value;
+    const clientData = {
+        name: document.getElementById('clientName')?.value?.trim(),
+        email: document.getElementById('clientEmail')?.value?.trim() || null,
+        phone: document.getElementById('clientPhone')?.value?.trim(),
+        birthdate: document.getElementById('clientBirthdate')?.value || null,
+        document: document.getElementById('clientDocument')?.value?.trim() || null
+    };
+    
+    // Validação
+    if (!clientData.name || !clientData.phone) {
+        alert('Nome e telefone são obrigatórios!');
+        return;
+    }
+    
+    console.log('📤 Enviando dados:', clientData); // DEBUG
+    
+    try {
+        let result;
+        
+        if (clientId) {
+            // ATUALIZAR
+            result = await supabaseClient
+                .from('clients')
+                .update({ ...clientData, updated_at: new Date().toISOString() })
+                .eq('id', clientId)
+                .select();
+        } else {
+            // INSERIR NOVO
+            result = await supabaseClient
+                .from('clients')
+                .insert({ ...clientData, created_at: new Date().toISOString() })
+                .select();
+        }
+        
+        console.log('✅ Resultado:', result); // DEBUG
+        
+        if (result.error) {
+            throw result.error;
+        }
+        
+        alert('✅ Salvo com sucesso!');
+        closeModal('clientModal');
+        await refreshClientsList();
+        
+    } catch (error) {
+        console.error('❌ Erro completo:', error);
+        alert('Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
+    }
+}
 // Módulo de Clientes
 async function loadClients() {
     const contentArea = document.getElementById('contentArea');

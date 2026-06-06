@@ -1,6 +1,54 @@
 // js/products.js - Módulo de Produtos
 // Gerencia o CRUD de produtos com código automático
-
+// Função de salvar produto
+async function handleProductSubmit(e) {
+    e.preventDefault();
+    
+    const productId = document.getElementById('productId')?.value;
+    const productData = {
+        description: document.getElementById('productDescription')?.value?.trim(),
+        cost_value: parseFloat((document.getElementById('productCost')?.value || '0').replace(',', '.')),
+        sale_value: parseFloat((document.getElementById('productPrice')?.value || '0').replace(',', '.')),
+        active: true
+    };
+    
+    if (!productData.description) {
+        alert('Descrição é obrigatória!');
+        return;
+    }
+    
+    console.log('📤 Enviando produto:', productData);
+    
+    try {
+        let result;
+        
+        if (productId) {
+            result = await supabaseClient
+                .from('products')
+                .update({ ...productData, updated_at: new Date().toISOString() })
+                .eq('id', productId)
+                .select();
+        } else {
+            const code = document.getElementById('productCode')?.value;
+            result = await supabaseClient
+                .from('products')
+                .insert({ ...productData, code: code, created_at: new Date().toISOString() })
+                .select();
+        }
+        
+        console.log('✅ Resultado:', result);
+        
+        if (result.error) throw result.error;
+        
+        alert('✅ Produto salvo com sucesso!');
+        closeModal('productModal');
+        await refreshProductsList();
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        alert('Erro ao salvar: ' + error.message);
+    }
+}
 // Variáveis globais do módulo
 let productsList = [];
 let editingProductId = null;
