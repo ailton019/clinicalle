@@ -1,58 +1,63 @@
-// js/auth.js - Versão Corrigida
+// js/auth.js - Substitua TODO o conteúdo por este arquivo
 
-// Gerenciamento de Autenticação
 class Auth {
     constructor() {
         this.currentUser = null;
         this.session = null;
-        this.initialized = false;
+    }
+    
+    // Método para obter o cliente Supabase
+    getSupabase() {
+        return window.supabaseClient;
     }
     
     async init() {
-        // Verificar se o Supabase está inicializado
+        const supabase = this.getSupabase();
+        
         if (!supabase) {
-            console.error('❌ Supabase não está inicializado');
-            this.initialized = false;
+            console.error('❌ Supabase não inicializado');
+            return false;
+        }
+
+        if (!supabase.auth) {
+            console.error('❌ Auth não disponível');
             return false;
         }
 
         try {
-            // Verificar sessão existente
             const { data: { session }, error } = await supabase.auth.getSession();
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Erro ao verificar sessão:', error.message);
+                return false;
+            }
             
             if (session) {
                 this.session = session;
                 this.currentUser = session.user;
-                this.initialized = true;
                 this.showApp();
-                console.log('✅ Sessão restaurada com sucesso');
-                return true;
+                console.log('✅ Sessão restaurada');
             }
             
-            this.initialized = true;
             return true;
         } catch (error) {
-            console.error('❌ Erro ao verificar sessão:', error.message);
-            this.initialized = false;
+            console.error('❌ Erro na inicialização:', error.message);
             return false;
         }
     }
     
     async login(email, password) {
+        const supabase = this.getSupabase();
+        
+        if (!supabase || !supabase.auth) {
+            return { 
+                success: false, 
+                message: 'Sistema não inicializado. Recarregue a página.' 
+            };
+        }
+
         try {
-            // Verificar se Supabase está disponível
-            if (!supabase) {
-                throw new Error('Sistema não inicializado. Recarregue a página.');
-            }
-
-            // Verificar se o cliente auth está disponível
-            if (!supabase.auth) {
-                throw new Error('Serviço de autenticação indisponível');
-            }
-
-            console.log('🔐 Tentando login com:', email);
+            console.log('🔐 Tentando login:', email);
             
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
@@ -61,11 +66,19 @@ class Auth {
             
             if (error) {
                 console.error('❌ Erro no login:', error.message);
-                throw error;
+                
+                let message = error.message;
+                if (message.includes('Invalid login credentials')) {
+                    message = 'E-mail ou senha incorretos';
+                } else if (message.includes('Email not confirmed')) {
+                    message = 'E-mail não confirmado';
+                }
+                
+                return { success: false, message };
             }
             
             if (!data || !data.session) {
-                throw new Error('Resposta inválida do servidor');
+                return { success: false, message: 'Resposta inválida do servidor' };
             }
             
             this.session = data.session;
@@ -76,78 +89,54 @@ class Auth {
             return { success: true };
             
         } catch (error) {
-            console.error('❌ Falha no login:', error);
-            
-            let message = error.message;
-            
-            // Traduzir mensagens comuns de erro
-            if (message.includes('Invalid login credentials')) {
-                message = 'E-mail ou senha incorretos';
-            } else if (message.includes('Email not confirmed')) {
-                message = 'E-mail não confirmado. Verifique sua caixa de entrada';
-            } else if (message.includes('rate limit')) {
-                message = 'Muitas tentativas. Aguarde um momento';
-            }
-            
+            console.error('❌ Erro:', error.message);
             return { 
                 success: false, 
-                message: message || 'Erro ao fazer login' 
+                message: error.message || 'Erro ao fazer login' 
             };
         }
     }
     
     async logout() {
+        const supabase = this.getSupabase();
+        
         try {
-            if (!supabase || !supabase.auth) {
-                throw new Error('Serviço indisponível');
+            if (supabase && supabase.auth) {
+                await supabase.auth.signOut();
             }
-
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            
-            this.currentUser = null;
-            this.session = null;
-            this.showLogin();
-            
-            console.log('✅ Logout realizado com sucesso');
         } catch (error) {
-            console.error('❌ Erro ao fazer logout:', error.message);
-            // Forçar logout local mesmo se falhar
-            this.currentUser = null;
-            this.session = null;
-            this.showLogin();
+            console.error('Erro no logout:', error.message);
         }
+        
+        this.currentUser = null;
+        this.session = null;
+        this.showLogin();
     }
     
     async resetPassword(email) {
-        try {
-            if (!supabase || !supabase.auth) {
-                throw new Error('Serviço indisponível');
-            }
+        const supabase = this.getSupabase();
+        
+        if (!supabase || !supabase.auth) {
+            return { 
+                success: false, 
+                message: 'Serviço indisponível' 
+            };
+        }
 
-            console.log('📧 Enviando recuperação para:', email);
-            
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + '/reset-password'
-            });
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email);
             
             if (error) throw error;
             
             return { 
                 success: true, 
-                message: 'E-mail de recuperação enviado! Verifique sua caixa de entrada e spam.' 
+                message: 'E-mail de recuperação enviado! Verifique sua caixa de entrada.' 
             };
         } catch (error) {
-            console.error('❌ Erro na recuperação:', error.message);
-            
-            let message = error.message;
-            if (message.includes('rate limit')) {
-                message = 'Aguarde 60 segundos antes de tentar novamente';
-            }
-            
+            console.error('❌ Erro:', error.message);
             return { 
                 success: false, 
-                message: message || 'Erro ao enviar e-mail de recuperação' 
+                message: error.message || 'Erro ao enviar e-mail' 
             };
         }
     }
@@ -159,7 +148,6 @@ class Auth {
         if (loginScreen) loginScreen.style.display = 'none';
         if (appScreen) appScreen.style.display = 'flex';
         
-        // Atualizar informações do usuário
         const userNameElement = document.getElementById('userName');
         if (userNameElement) {
             userNameElement.textContent = 
@@ -173,13 +161,11 @@ class Auth {
         const loginScreen = document.getElementById('loginScreen');
         const appScreen = document.getElementById('appScreen');
         
-        if (loginScreen) {
-            loginScreen.style.display = 'flex';
-            // Limpar formulário
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) loginForm.reset();
-        }
+        if (loginScreen) loginScreen.style.display = 'flex';
         if (appScreen) appScreen.style.display = 'none';
+        
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) loginForm.reset();
     }
     
     isAuthenticated() {
@@ -187,31 +173,26 @@ class Auth {
     }
 }
 
-// Instância global de autenticação
+// Criar instância global
 const auth = new Auth();
 
-// Aguardar o DOM carregar e Supabase inicializar
+// Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Iniciando aplicação...');
     
-    // Aguardar um momento para garantir que o Supabase inicializou
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Aguardar Supabase inicializar
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Verificar se Supabase está disponível
-    if (!supabase) {
-        console.error('❌ Supabase não encontrado. Verifique:');
-        console.error('1. Se o arquivo js/config.js existe');
-        console.error('2. Se as credenciais estão corretas');
-        console.error('3. Se a URL do Supabase está acessível');
-        
-        // Mostrar mensagem na tela
+    if (!window.supabaseClient) {
+        console.error('❌ Supabase não encontrado');
         const errorDiv = document.getElementById('loginError');
         if (errorDiv) {
             errorDiv.innerHTML = `
                 <strong>⚠️ Erro de Configuração</strong><br>
-                Sistema não inicializado. Verifique:<br>
-                1. Arquivo js/config.js<br>
-                2. Credenciais do Supabase<br>
+                Verifique:<br>
+                1. Conexão com internet<br>
+                2. Configurações em js/config.js<br>
                 3. Console do navegador (F12)
             `;
             errorDiv.style.display = 'block';
@@ -220,17 +201,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Inicializar autenticação
-    const initialized = await auth.init();
+    await auth.init();
     
-    if (!initialized) {
-        console.error('❌ Falha na inicialização da autenticação');
-    }
-    
-    // Configurar eventos de login
-    setupLoginEvents();
+    // Configurar eventos
+    setupEvents();
 });
 
-function setupLoginEvents() {
+function setupEvents() {
     // Login Form
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -242,7 +219,6 @@ function setupLoginEvents() {
             const btnLogin = document.getElementById('btnLogin');
             const errorDiv = document.getElementById('loginError');
             
-            // Validações básicas
             if (!email || !password) {
                 if (errorDiv) {
                     errorDiv.textContent = 'Preencha todos os campos';
@@ -251,16 +227,13 @@ function setupLoginEvents() {
                 return;
             }
             
-            // Desabilitar botão
             if (btnLogin) {
                 btnLogin.disabled = true;
                 btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
             }
             
-            // Esconder erro anterior
             if (errorDiv) errorDiv.style.display = 'none';
             
-            // Tentar login
             const result = await auth.login(email, password);
             
             if (!result.success) {
@@ -277,81 +250,52 @@ function setupLoginEvents() {
     }
     
     // Forgot Password
-    const forgotLink = document.getElementById('forgotPassword');
-    if (forgotLink) {
-        forgotLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            const loginFormDiv = document.querySelector('.login-form');
-            const resetDiv = document.getElementById('resetPasswordForm');
-            
-            if (loginFormDiv) loginFormDiv.style.display = 'none';
-            if (resetDiv) resetDiv.style.display = 'block';
-        });
-    }
+    document.getElementById('forgotPassword')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const loginFormDiv = document.querySelector('.login-form');
+        const resetDiv = document.getElementById('resetPasswordForm');
+        if (loginFormDiv) loginFormDiv.style.display = 'none';
+        if (resetDiv) resetDiv.style.display = 'block';
+    });
     
     // Back to Login
-    const backBtn = document.getElementById('backToLogin');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            const loginFormDiv = document.querySelector('.login-form');
-            const resetDiv = document.getElementById('resetPasswordForm');
-            
-            if (loginFormDiv) loginFormDiv.style.display = 'block';
-            if (resetDiv) resetDiv.style.display = 'none';
-        });
-    }
+    document.getElementById('backToLogin')?.addEventListener('click', () => {
+        const loginFormDiv = document.querySelector('.login-form');
+        const resetDiv = document.getElementById('resetPasswordForm');
+        if (loginFormDiv) loginFormDiv.style.display = 'block';
+        if (resetDiv) resetDiv.style.display = 'none';
+    });
     
-    // Reset Password Form
-    const resetForm = document.getElementById('resetForm');
-    if (resetForm) {
-        resetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('resetEmail')?.value;
-            const messageDiv = document.getElementById('resetMessage');
-            const submitBtn = resetForm.querySelector('button[type="submit"]');
-            
-            if (!email) {
-                if (messageDiv) {
-                    messageDiv.textContent = 'Digite seu e-mail';
-                    messageDiv.className = 'error-message';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
-            
-            // Desabilitar botão
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-            }
-            
-            const result = await auth.resetPassword(email);
-            
+    // Reset Password
+    document.getElementById('resetForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('resetEmail')?.value;
+        const messageDiv = document.getElementById('resetMessage');
+        
+        if (!email) {
             if (messageDiv) {
-                messageDiv.textContent = result.message;
-                messageDiv.className = result.success ? 'success-message' : 'error-message';
+                messageDiv.textContent = 'Digite seu e-mail';
+                messageDiv.className = 'error-message';
                 messageDiv.style.display = 'block';
             }
-            
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
-            }
-        });
-    }
+            return;
+        }
+        
+        const result = await auth.resetPassword(email);
+        
+        if (messageDiv) {
+            messageDiv.textContent = result.message;
+            messageDiv.className = result.success ? 'success-message' : 'error-message';
+            messageDiv.style.display = 'block';
+        }
+    });
     
     // Logout
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => auth.logout());
-    }
+    document.getElementById('logoutBtn')?.addEventListener('click', () => auth.logout());
     
-    // Menu Toggle para Mobile
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', () => {
-            document.getElementById('sidebar')?.classList.toggle('show');
-        });
-    }
+    // Menu Mobile
+    document.getElementById('menuToggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.toggle('show');
+    });
 }
