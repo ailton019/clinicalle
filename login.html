@@ -3,18 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Clínica Estética ERP</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Login - Sistema de Gestão</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo i {
+            font-size: 50px;
+            color: #667eea;
+        }
+
+        .logo h2 {
+            margin-top: 10px;
+            color: #333;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
         .tab-buttons {
             display: flex;
             gap: 10px;
             margin-bottom: 30px;
             border-bottom: 2px solid #e5e7eb;
         }
-        
+
         .tab-btn {
             flex: 1;
             padding: 12px;
@@ -26,22 +75,22 @@
             color: #6b7280;
             transition: all 0.3s ease;
         }
-        
+
         .tab-btn.active {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
             margin-bottom: -2px;
         }
-        
+
         .tab-content {
             display: none;
         }
-        
+
         .tab-content.active {
             display: block;
             animation: fadeIn 0.5s ease;
         }
-        
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -52,7 +101,65 @@
                 transform: translateY(0);
             }
         }
-        
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-group label i {
+            margin-right: 8px;
+            color: #667eea;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
         .password-strength {
             margin-top: 8px;
             height: 4px;
@@ -60,98 +167,29 @@
             border-radius: 2px;
             overflow: hidden;
         }
-        
+
         .password-strength-bar {
             height: 100%;
             width: 0%;
             transition: width 0.3s ease;
         }
-        
+
+        .strength-weak { background: #ef4444; width: 25%; }
+        .strength-medium { background: #f59e0b; width: 50%; }
+        .strength-strong { background: #10b981; width: 75%; }
+        .strength-very-strong { background: #059669; width: 100%; }
+
         .password-strength-text {
             font-size: 12px;
             margin-top: 5px;
             display: block;
         }
-        
-        .strength-weak { background: #ef4444; width: 25%; }
-        .strength-medium { background: #f59e0b; width: 50%; }
-        .strength-strong { background: #10b981; width: 75%; }
-        .strength-very-strong { background: #059669; width: 100%; }
-        
+
         .text-weak { color: #ef4444; }
         .text-medium { color: #f59e0b; }
         .text-strong { color: #10b981; }
         .text-very-strong { color: #059669; }
-        
-        .terms-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        
-        .terms-checkbox input {
-            width: auto;
-        }
-        
-        .btn-google {
-            width: 100%;
-            padding: 12px;
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            margin-top: 15px;
-        }
-        
-        .btn-google:hover {
-            background: #f9fafb;
-            border-color: var(--primary-color);
-        }
-        
-        .btn-google i {
-            color: #db4437;
-            font-size: 18px;
-        }
-        
-        .divider {
-            text-align: center;
-            margin: 20px 0;
-            position: relative;
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 45%;
-            height: 1px;
-            background: #e5e7eb;
-        }
-        
-        .divider::before {
-            left: 0;
-        }
-        
-        .divider::after {
-            right: 0;
-        }
-        
-        .divider span {
-            background: white;
-            padding: 0 10px;
-            color: #6b7280;
-            font-size: 12px;
-        }
-        
+
         .toast {
             position: fixed;
             top: 20px;
@@ -166,7 +204,7 @@
             z-index: 1100;
             animation: slideInRight 0.3s ease;
         }
-        
+
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
@@ -177,36 +215,82 @@
                 opacity: 1;
             }
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="login-page">
+<body>
     <div class="login-container">
         <div class="login-card">
-            <div class="login-header">
-                <div class="logo">
-                    <i class="fas fa-spa"></i>
-                    <h2>Clínica Estética ERP</h2>
-                </div>
-                <p class="subtitle">Sistema de Gestão Completo</p>
+            <div class="logo">
+                <i class="fas fa-store"></i>
+                <h2>Sistema de Gestão</h2>
             </div>
+            <p class="subtitle">Controle total da sua loja</p>
             
-            <!-- Tab Buttons -->
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="login">Entrar</button>
-                <button class="tab-btn" data-tab="register">Criar Conta</button>
+                <button class="tab-btn" data-tab="register">Cadastrar Usuário</button>
             </div>
             
-            <!-- Login Tab -->
             <div id="loginTab" class="tab-content active">
-                <form id="loginForm" class="login-form">
+                <form id="loginForm">
                     <div class="input-group">
                         <label><i class="fas fa-envelope"></i> E-mail</label>
-                        <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                        <input type="email" id="loginEmail" required>
                     </div>
                     
                     <div class="input-group">
                         <label><i class="fas fa-lock"></i> Senha</label>
-                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                        <input type="password" id="loginPassword" required>
                     </div>
                     
                     <button type="submit" class="btn-login">
@@ -214,40 +298,31 @@
                     </button>
                 </form>
                 
-                <div class="divider">
-                    <span>ou</span>
-                </div>
-                
-                <button class="btn-google" id="googleLoginBtn">
-                    <i class="fab fa-google"></i> Continuar com Google
-                </button>
-                
                 <div class="login-footer">
                     <a href="#" id="forgotPasswordLink">Esqueceu a senha?</a>
                 </div>
             </div>
             
-            <!-- Register Tab -->
             <div id="registerTab" class="tab-content">
-                <form id="registerForm" class="login-form">
+                <form id="registerForm">
                     <div class="input-group">
-                        <label><i class="fas fa-user"></i> Nome Completo</label>
-                        <input type="text" id="registerNome" placeholder="Seu nome completo" required>
+                        <label><i class="fas fa-user"></i> Nome</label>
+                        <input type="text" id="registerNome" required>
                     </div>
                     
                     <div class="input-group">
                         <label><i class="fas fa-envelope"></i> E-mail</label>
-                        <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                        <input type="email" id="registerEmail" required>
                     </div>
                     
                     <div class="input-group">
                         <label><i class="fas fa-phone"></i> Telefone</label>
-                        <input type="tel" id="registerTelefone" placeholder="(11) 99999-9999">
+                        <input type="tel" id="registerTelefone">
                     </div>
                     
                     <div class="input-group">
                         <label><i class="fas fa-lock"></i> Senha</label>
-                        <input type="password" id="registerPassword" placeholder="Crie uma senha" required>
+                        <input type="password" id="registerPassword" required>
                         <div class="password-strength">
                             <div class="password-strength-bar" id="passwordStrengthBar"></div>
                         </div>
@@ -256,104 +331,68 @@
                     
                     <div class="input-group">
                         <label><i class="fas fa-lock"></i> Confirmar Senha</label>
-                        <input type="password" id="registerConfirmPassword" placeholder="Confirme sua senha" required>
-                    </div>
-                    
-                    <div class="terms-checkbox">
-                        <input type="checkbox" id="acceptTerms" required>
-                        <label for="acceptTerms">Li e aceito os <a href="#" id="termsLink">Termos de Uso</a></label>
+                        <input type="password" id="registerConfirmPassword" required>
                     </div>
                     
                     <button type="submit" class="btn-login">
-                        <i class="fas fa-user-plus"></i> Criar Conta
+                        <i class="fas fa-user-plus"></i> Cadastrar
                     </button>
                 </form>
-                
-                <div class="divider">
-                    <span>ou</span>
-                </div>
-                
-                <button class="btn-google" id="googleRegisterBtn">
-                    <i class="fab fa-google"></i> Cadastrar com Google
-                </button>
             </div>
         </div>
     </div>
     
-    <!-- Modal Recuperar Senha -->
     <div id="resetPasswordModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3>Recuperar Senha</h3>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
-                <p>Digite seu e-mail para receber o link de recuperação de senha.</p>
-                <form id="resetPasswordForm">
-                    <div class="input-group" style="margin-top: 20px;">
-                        <label><i class="fas fa-envelope"></i> E-mail</label>
-                        <input type="email" id="resetEmail" placeholder="seu@email.com" required>
-                    </div>
-                </form>
+                <p>Digite seu e-mail para receber o link de recuperação</p>
+                <div class="input-group" style="margin-top: 20px;">
+                    <label><i class="fas fa-envelope"></i> E-mail</label>
+                    <input type="email" id="resetEmail" placeholder="seu@email.com">
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                 <button class="btn-secondary" onclick="closeResetModal()">Cancelar</button>
-                <button class="btn-primary" onclick="sendResetLink()">Enviar Link</button>
+                <button class="btn-primary" onclick="sendResetLink()">Enviar</button>
             </div>
         </div>
     </div>
-    
-    <!-- Modal Termos de Uso -->
-    <div id="termsModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>Termos de Uso</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
-                <h4>1. Aceitação dos Termos</h4>
-                <p>Ao utilizar o sistema Clínica Estética ERP, você concorda com estes termos de uso.</p>
-                
-                <h4>2. Cadastro</h4>
-                <p>Você é responsável por manter suas informações de cadastro atualizadas e confidenciais.</p>
-                
-                <h4>3. Uso do Sistema</h4>
-                <p>O sistema é destinado exclusivamente para gestão de clínicas de estética.</p>
-                
-                <h4>4. Privacidade</h4>
-                <p>Seus dados são protegidos conforme a Lei Geral de Proteção de Dados (LGPD).</p>
-                
-                <h4>5. Cancelamento</h4>
-                <p>Você pode cancelar sua conta a qualquer momento entrando em contato com o suporte.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-primary" onclick="closeTermsModal()">Li e Aceito</button>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-client.js"></script>
+
     <script>
-        // Supabase configuration
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+        const SUPABASE_URL = 'https://kpoldeocfcukimwcacvy.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_pfXmpK134vKVzWbpXbcnEQ_gpADCzDd';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentResetModal = null;
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : '#ef4444'}`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}" 
+                   style="color: ${type === 'success' ? '#10b981' : '#ef4444'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
-                
-                // Update active states
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
                 document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                 document.getElementById(`${tab}Tab`).classList.add('active');
             });
         });
-        
+
         // Password strength checker
         const passwordInput = document.getElementById('registerPassword');
         if (passwordInput) {
@@ -363,8 +402,6 @@
                 const strengthText = document.getElementById('passwordStrengthText');
                 
                 let strength = 0;
-                let message = '';
-                
                 if (password.length >= 8) strength++;
                 if (password.match(/[a-z]/)) strength++;
                 if (password.match(/[A-Z]/)) strength++;
@@ -374,125 +411,111 @@
                 switch(strength) {
                     case 0:
                     case 1:
-                        message = 'Senha fraca';
+                        strengthText.textContent = 'Senha fraca';
                         strengthBar.className = 'password-strength-bar strength-weak';
                         strengthText.className = 'password-strength-text text-weak';
                         break;
                     case 2:
                     case 3:
-                        message = 'Senha média';
+                        strengthText.textContent = 'Senha média';
                         strengthBar.className = 'password-strength-bar strength-medium';
                         strengthText.className = 'password-strength-text text-medium';
                         break;
                     case 4:
-                        message = 'Senha forte';
+                        strengthText.textContent = 'Senha forte';
                         strengthBar.className = 'password-strength-bar strength-strong';
                         strengthText.className = 'password-strength-text text-strong';
                         break;
                     case 5:
-                        message = 'Senha muito forte';
+                        strengthText.textContent = 'Senha muito forte';
                         strengthBar.className = 'password-strength-bar strength-very-strong';
                         strengthText.className = 'password-strength-text text-very-strong';
                         break;
                 }
-                
-                strengthText.textContent = message;
             });
         }
-        
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast`;
-            toast.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#f59e0b'}`;
-            toast.innerHTML = `
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}" 
-                   style="color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#f59e0b'}"></i>
-                <span>${message}</span>
-            `;
-            document.body.appendChild(toast);
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
             
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-        
-        // Login function
-        async function login(email, password) {
             try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email,
-                    password
-                });
-                
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 
-                if (data.user) {
-                    showToast('Login realizado com sucesso!', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 1000);
-                }
+                showToast('Login realizado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
             } catch (error) {
                 showToast(error.message, 'error');
             }
-        }
-        
-        // Register function
-        async function register(nome, email, telefone, password) {
+        });
+
+        // Register
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('registerNome').value;
+            const email = document.getElementById('registerEmail').value;
+            const telefone = document.getElementById('registerTelefone').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showToast('As senhas não coincidem', 'error');
+                return;
+            }
+            
             try {
-                // Check if passwords match
-                const confirmPassword = document.getElementById('registerConfirmPassword').value;
-                if (password !== confirmPassword) {
-                    showToast('As senhas não coincidem', 'error');
-                    return;
-                }
-                
-                // Check terms
-                if (!document.getElementById('acceptTerms').checked) {
-                    showToast('Você precisa aceitar os termos de uso', 'error');
-                    return;
-                }
-                
-                const { data, error } = await supabaseClient.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
-                        data: {
-                            nome: nome,
-                            telefone: telefone
-                        }
+                        data: { nome, telefone }
                     }
                 });
                 
                 if (error) throw error;
                 
                 if (data.user) {
-                    // Create profile in profiles table
-                    await supabaseClient
+                    // Criar perfil
+                    await supabase
                         .from('profiles')
-                        .insert([{
-                            id: data.user.id,
-                            nome: nome,
-                            email: email,
-                            telefone: telefone
-                        }]);
+                        .insert([{ id: data.user.id, nome, email, telefone, role: 'user' }]);
                     
-                    showToast('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar.', 'success');
-                    
-                    // Clear form and switch to login tab
+                    showToast('Cadastro realizado com sucesso! Faça login.', 'success');
                     document.getElementById('registerForm').reset();
                     document.querySelector('.tab-btn[data-tab="login"]').click();
                 }
             } catch (error) {
                 showToast(error.message, 'error');
             }
-        }
+        });
+
+        // Reset password modal
+        const resetModal = document.getElementById('resetPasswordModal');
         
-        // Reset password function
-        async function resetPassword(email) {
+        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            resetModal.style.display = 'flex';
+        });
+
+        window.closeResetModal = () => {
+            resetModal.style.display = 'none';
+            document.getElementById('resetEmail').value = '';
+        };
+
+        window.sendResetLink = async () => {
+            const email = document.getElementById('resetEmail').value;
+            if (!email) {
+                showToast('Digite seu e-mail', 'error');
+                return;
+            }
+            
             try {
-                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/update-password.html`
                 });
                 
@@ -503,99 +526,24 @@
             } catch (error) {
                 showToast(error.message, 'error');
             }
-        }
-        
-        // Google login
-        async function loginWithGoogle() {
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: window.location.origin + '/dashboard.html'
-                    }
-                });
-                
-                if (error) throw error;
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-        
-        // Event listeners
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            login(email, password);
-        });
-        
-        document.getElementById('registerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nome = document.getElementById('registerNome').value;
-            const email = document.getElementById('registerEmail').value;
-            const telefone = document.getElementById('registerTelefone').value;
-            const password = document.getElementById('registerPassword').value;
-            register(nome, email, telefone, password);
-        });
-        
-        document.getElementById('googleLoginBtn').addEventListener('click', () => {
-            loginWithGoogle();
-        });
-        
-        document.getElementById('googleRegisterBtn').addEventListener('click', () => {
-            loginWithGoogle();
-        });
-        
-        // Modal functions
-        const resetModal = document.getElementById('resetPasswordModal');
-        const termsModal = document.getElementById('termsModal');
-        
-        document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
-            e.preventDefault();
-            resetModal.style.display = 'flex';
-        });
-        
-        document.getElementById('termsLink').addEventListener('click', (e) => {
-            e.preventDefault();
-            termsModal.style.display = 'flex';
-        });
-        
-        function closeResetModal() {
-            resetModal.style.display = 'none';
-            document.getElementById('resetEmail').value = '';
-        }
-        
-        function sendResetLink() {
-            const email = document.getElementById('resetEmail').value;
-            if (email) {
-                resetPassword(email);
-            } else {
-                showToast('Digite seu e-mail', 'error');
-            }
-        }
-        
-        function closeTermsModal() {
-            termsModal.style.display = 'none';
-            document.getElementById('acceptTerms').checked = true;
-        }
-        
-        // Close modals when clicking on X
+        };
+
+        // Close modal
         document.querySelectorAll('.close').forEach(closeBtn => {
             closeBtn.addEventListener('click', () => {
                 closeBtn.closest('.modal').style.display = 'none';
             });
         });
-        
-        // Close modal when clicking outside
+
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.style.display = 'none';
             }
         });
-        
-        // Check if user is already logged in
+
+        // Check if already logged in
         async function checkSession() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             if (session && window.location.pathname.includes('login.html')) {
                 window.location.href = 'dashboard.html';
             }

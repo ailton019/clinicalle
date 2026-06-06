@@ -3,108 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clínica Estética ERP - Sistema de Gestão</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Sistema de Gestão - Loja</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .landing-container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .logo {
+            font-size: 80px;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+
+        .btn-login {
+            background: white;
+            color: #667eea;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="landing-page">
-    <nav class="landing-nav">
-        <div class="nav-container">
-            <div class="logo">
-                <i class="fas fa-spa"></i>
-                <span>Clínica Estética ERP</span>
-            </div>
-            <div class="nav-links">
-                <a href="#features">Funcionalidades</a>
-                <a href="#benefits">Benefícios</a>
-                <a href="#pricing">Planos</a>
-                <a href="login.html" class="btn-login-nav">Entrar</a>
-                <a href="login.html?register=true" class="btn-primary-nav">Começar Agora</a>
-            </div>
-            <div class="mobile-menu-btn">
-                <i class="fas fa-bars"></i>
-            </div>
+<body>
+    <div class="landing-container">
+        <div class="logo">
+            <i class="fas fa-store"></i>
         </div>
-    </nav>
-
-    <header class="hero">
-        <div class="hero-container">
-            <div class="hero-content">
-                <h1>Gestão completa para sua <span class="highlight">clínica de estética</span></h1>
-                <p>Controle financeiro, estoque, agendamentos e indicadores em um só lugar. Aumente sua produtividade em até 70%.</p>
-                <div class="hero-buttons">
-                    <a href="login.html?register=true" class="btn-hero-primary">Teste Gratuitamente</a>
-                    <a href="#demo" class="btn-hero-secondary">Ver Demonstração</a>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <span class="stat-number">500+</span>
-                        <span class="stat-label">Clínicas</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">50k+</span>
-                        <span class="stat-label">Atendimentos/mês</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">99.9%</span>
-                        <span class="stat-label">Satisfação</span>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-image">
-                <img src="assets/images/dashboard-preview.png" alt="Dashboard Preview">
-            </div>
-        </div>
-    </header>
-
-    <section id="features" class="features">
-        <div class="container">
-            <div class="section-header">
-                <h2>Funcionalidades Poderosas</h2>
-                <p>Tudo que sua clínica precisa para crescer de forma organizada</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Dashboard Inteligente</h3>
-                    <p>Indicadores em tempo real, gráficos interativos e análise de desempenho</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-coins"></i>
-                    <h3>Financeiro Completo</h3>
-                    <p>Controle de receitas, despesas, fluxo de caixa e relatórios gerenciais</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-boxes"></i>
-                    <h3>Gestão de Estoque</h3>
-                    <p>Controle de produtos, alertas automáticos e baixa por serviço realizado</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-calendar-alt"></i>
-                    <h3>Agenda Inteligente</h3>
-                    <p>Agendamentos, lembretes automáticos e gestão de profissionais</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-users"></i>
-                    <h3>CRM Completo</h3>
-                    <p>Histórico de clientes, fidelização e marketing automatizado</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-chart-pie"></i>
-                    <h3>Relatórios Avançados</h3>
-                    <p>Análise de lucratividade, produtos mais vendidos e projeções</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2024 Clínica Estética ERP - Todos os direitos reservados</p>
-        </div>
-    </footer>
-
-    <script src="js/landing.js"></script>
+        <h1>Sistema de Gestão da Loja</h1>
+        <p>Controle de vendas, estoque e faturamento em um só lugar</p>
+        <button class="btn-login" onclick="window.location.href='login.html'">
+            <i class="fas fa-sign-in-alt"></i> Acessar Sistema
+        </button>
+    </div>
 </body>
 </html>
