@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Clínica Estética ERP</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dark-mode.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-spa"></i>
+                    <h3>Clínica Estética</h3>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-page="financeiro">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Financeiro</span>
+                </div>
+                <div class="nav-item" data-page="receitas">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Receitas</span>
+                </div>
+                <div class="nav-item" data-page="despesas">
+                    <i class="fas fa-arrow-down"></i>
+                    <span>Despesas</span>
+                </div>
+                <div class="nav-item" data-page="gastos-fixos">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Gastos Fixos</span>
+                </div>
+                <div class="nav-item" data-page="gastos-variaveis">
+                    <i class="fas fa-charging-station"></i>
+                    <span>Gastos Variáveis</span>
+                </div>
+                <div class="nav-item" data-page="produtos">
+                    <i class="fas fa-box"></i>
+                    <span>Produtos</span>
+                </div>
+                <div class="nav-item" data-page="servicos">
+                    <i class="fas fa-hand-sparkles"></i>
+                    <span>Serviços</span>
+                </div>
+                <div class="nav-item" data-page="estoque">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Estoque</span>
+                </div>
+                <div class="nav-item" data-page="clientes">
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                </div>
+                <div class="nav-item" data-page="agenda">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Agenda</span>
+                </div>
+                <div class="nav-item" data-page="relatorios">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Relatórios</span>
+                </div>
+                <div class="nav-item" data-page="configuracoes">
+                    <i class="fas fa-cog"></i>
+                    <span>Configurações</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-info">
+                    <button class="mobile-toggle" id="mobileToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="clinic-name">Clínica Estética Spa</div>
+                    <div class="current-date" id="currentDate"></div>
+                </div>
+                <div class="header-actions">
+                    <button class="notification-btn" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button class="dark-mode-btn" id="darkModeBtn">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="userName">Carregando...</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <!-- Dashboard View -->
+                <div id="dashboardView" class="page-view active">
+                    <div class="dashboard-cards" id="dashboardCards">
+                        <!-- Cards will be loaded dynamically -->
+                    </div>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3 class="chart-title">Receita por Mês</h3>
+                            <canvas id="receitaPorMesChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Lucro por Mês</h3>
+                            <canvas id="lucroPorMesChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Despesas por Categoria</h3>
+                            <canvas id="despesasCategoriaChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Produtos Mais Vendidos</h3>
+                            <canvas id="produtosVendidosChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Serviços Mais Realizados</h3>
+                            <canvas id="servicosRealizadosChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3 class="chart-title">Fluxo de Caixa</h3>
+                            <canvas id="fluxoCaixaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financeiro View -->
+                <div id="financeiroView" class="page-view">
+                    <div class="page-header">
+                        <h2>Movimentações Financeiras</h2>
+                        <button class="btn-primary" onclick="openModal('movimentacaoModal')">
+                            <i class="fas fa-plus"></i> Nova Movimentação
+                        </button>
+                    </div>
+                    <div class="filters-bar">
+                        <input type="date" id="filterDataInicio" placeholder="Data Início">
+                        <input type="date" id="filterDataFim" placeholder="Data Fim">
+                        <select id="filterTipo">
+                            <option value="">Todos</option>
+                            <option value="receita">Receitas</option>
+                            <option value="despesa">Despesas</option>
+                        </select>
+                        <select id="filterCategoria">
+                            <option value="">Todas Categorias</option>
+                        </select>
+                        <button class="btn-secondary" onclick="filterMovimentacoes()">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                    </div>
+                    <div class="data-table">
+                        <table id="movimentacoesTable">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th>Descrição</th>
+                                    <th>Valor</th>
+                                    <th>Forma Pagamento</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimentacoesList">
+                                <tr><td colspan="7">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Produtos View -->
+                <div id="produtosView" class="page-view">
+                    <div class="page-header">
+                        <h2>Catálogo de Produtos</h2>
+                        <button class="btn-primary" onclick="openModal('produtoModal')">
+                            <i class="fas fa-plus"></i> Novo Produto
+                        </button>
+                    </div>
+                    <div class="filters-bar">
+                        <input type="text" id="searchProduto" placeholder="Buscar produto...">
+                        <select id="filterCategoriaProduto">
+                            <option value="">Todas Categorias</option>
+                            <option value="Cosméticos">Cosméticos</option>
+                            <option value="Injetáveis">Injetáveis</option>
+                            <option value="Equipamentos">Equipamentos</option>
+                        </select>
+                        <button class="btn-secondary" onclick="searchProdutos()">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nome</th>
+                                    <th>Categoria</th>
+                                    <th>Estoque</th>
+                                    <th>Custo</th>
+                                    <th>Venda</th>
+                                    <th>Margem</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="produtosList">
+                                <tr><td colspan="8">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Clientes View -->
+                <div id="clientesView" class="page-view">
+                    <div class="page-header">
+                        <h2>Clientes</h2>
+                        <button class="btn-primary" onclick="openModal('clienteModal')">
+                            <i class="fas fa-plus"></i> Novo Cliente
+                        </button>
+                    </div>
+                    <div class="filters-bar">
+                        <input type="text" id="searchCliente" placeholder="Buscar por nome ou CPF...">
+                        <button class="btn-secondary" onclick="searchClientes()">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    <div class="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>CPF</th>
+                                    <th>Telefone</th>
+                                    <th>E-mail</th>
+                                    <th>Total Gasto</th>
+                                    <th>Último Atendimento</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientesList">
+                                <tr><td colspan="7">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Agenda View -->
+                <div id="agendaView" class="page-view">
+                    <div class="page-header">
+                        <h2>Agenda de Atendimentos</h2>
+                        <button class="btn-primary" onclick="openModal('agendamentoModal')">
+                            <i class="fas fa-plus"></i> Novo Agendamento
+                        </button>
+                    </div>
+                    <div class="calendar-controls">
+                        <button onclick="changeWeek(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <h3 id="currentWeekLabel"></h3>
+                        <button onclick="changeWeek(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                        <!-- Calendar will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Templates -->
+    <div id="movimentacaoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nova Movimentação Financeira</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="movimentacaoForm">
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" id="movData" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="movTipo" required>
+                            <option value="receita">Receita</option>
+                            <option value="despesa">Despesa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="movCategoria" required>
+                            <option value="">Selecione</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" id="movDescricao" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor</label>
+                        <input type="number" step="0.01" id="movValor" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de Pagamento</label>
+                        <select id="movFormaPagamento">
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao_credito">Cartão Crédito</option>
+                            <option value="cartao_debito">Cartão Débito</option>
+                            <option value="pix">PIX</option>
+                            <option value="transferencia">Transferência</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea id="movObservacoes"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('movimentacaoModal')">Cancelar</button>
+                <button class="btn-primary" onclick="saveMovimentacao()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="produtoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Cadastro de Produto</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="produtoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Código</label>
+                            <input type="text" id="prodCodigo" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nome</label>
+                            <input type="text" id="prodNome" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Categoria</label>
+                            <select id="prodCategoria" required>
+                                <option value="Cosméticos">Cosméticos</option>
+                                <option value="Injetáveis">Injetáveis</option>
+                                <option value="Equipamentos">Equipamentos</option>
+                                <option value="Medicamentos">Medicamentos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Marca</label>
+                            <input type="text" id="prodMarca">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fornecedor</label>
+                            <input type="text" id="prodFornecedor">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantidade</label>
+                            <input type="number" id="prodQuantidade" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Estoque Mínimo</label>
+                            <input type="number" id="prodEstoqueMinimo">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Validade</label>
+                            <input type="date" id="prodDataValidade">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Custo (R$)</label>
+                            <input type="number" step="0.01" id="prodCusto" required onchange="calcularMargem()">
+                        </div>
+                        <div class="form-group">
+                            <label>Preço Venda (R$)</label>
+                            <input type="number" step="0.01" id="prodPrecoVenda" required onchange="calcularMargem()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Margem de Lucro: <span id="prodMargem">0</span>%</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('produtoModal')">Cancelar</button>
+                <button class="btn-primary" onclick="saveProduto()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/financeiro.js"></script>
+    <script src="js/estoque.js"></script>
+    <script src="js/clientes.js"></script>
+    <script src="js/agenda.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
