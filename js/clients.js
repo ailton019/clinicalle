@@ -62,7 +62,7 @@ async function loadClients() {
                     
                     <div class="form-group">
                         <label>Celular *</label>
-                        <input type="tel" id="clientPhone" required 
+                        <input type="tel" id="clientPhone"  
                                placeholder="(00) 00000-0000"
                                pattern="\([0-9]{2}\) [0-9]{5}-[0-9]{4}">
                     </div>
