@@ -1,17 +1,13 @@
-// js/dashboard.js - Dashboard com Metas
+// js/dashboard.js - Dashboard com Metas (CORRIGIDO)
 console.log('📦 Carregando dashboard...');
 
 let charts = {};
 
-// ============================================
-// CARREGAR DASHBOARD
-// ============================================
 async function loadDashboard() {
     const contentArea = document.getElementById('contentArea');
     document.getElementById('pageTitle').textContent = 'Dashboard';
     
     contentArea.innerHTML = `
-        <!-- Cards de Indicadores -->
         <div class="stats-grid">
             <div class="stat-card primary">
                 <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
@@ -51,7 +47,6 @@ async function loadDashboard() {
             </div>
         </div>
         
-        <!-- Filtros -->
         <div class="filters-bar">
             <button class="filter-btn active" data-period="today">Hoje</button>
             <button class="filter-btn" data-period="7days">Últimos 7 dias</button>
@@ -60,7 +55,6 @@ async function loadDashboard() {
             <button class="filter-btn" data-period="year">Ano Atual</button>
         </div>
         
-        <!-- Gráficos -->
         <div class="charts-grid">
             <div class="chart-container">
                 <h3>Receitas por Mês</h3>
@@ -83,7 +77,6 @@ async function loadDashboard() {
             </div>
         </div>
         
-        <!-- Indicadores Financeiros -->
         <div class="stats-grid" style="margin-top: 30px;">
             <div class="stat-card">
                 <div class="stat-label">Margem de Lucro</div>
@@ -102,10 +95,8 @@ async function loadDashboard() {
         </div>
     `;
     
-    // Carregar dados iniciais
     await updateDashboard('month');
     
-    // Event listeners para filtros
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -115,16 +106,13 @@ async function loadDashboard() {
     });
 }
 
-// ============================================
-// ATUALIZAR DASHBOARD
-// ============================================
 async function updateDashboard(period) {
     console.log('📊 Atualizando dashboard - período:', period);
     
     try {
         const { startDate, endDate } = getDateRange(period);
         
-        // Buscar vendas no período
+        // Buscar vendas
         const { data: vendas, error: errorVendas } = await supabaseClient
             .from('sales')
             .select('*')
@@ -133,7 +121,7 @@ async function updateDashboard(period) {
         
         if (errorVendas) throw errorVendas;
         
-        // Buscar despesas no período
+        // Buscar despesas
         const { data: despesas, error: errorDespesas } = await supabaseClient
             .from('expenses')
             .select('*')
@@ -142,14 +130,14 @@ async function updateDashboard(period) {
         
         if (errorDespesas) throw errorDespesas;
         
-        // Buscar total de clientes
+        // Total de clientes
         const { count: totalClientes, error: errorClientes } = await supabaseClient
             .from('clients')
             .select('*', { count: 'exact', head: true });
         
         if (errorClientes) throw errorClientes;
         
-        // Buscar total de produtos ativos
+        // Total de produtos ativos
         const { count: totalProdutos, error: errorProdutos } = await supabaseClient
             .from('products')
             .select('*', { count: 'exact', head: true })
@@ -157,18 +145,32 @@ async function updateDashboard(period) {
         
         if (errorProdutos) throw errorProdutos;
         
-        // Calcular totais
+        // ============================================
+        // CÁLCULO CORRIGIDO DAS DESPESAS
+        // ============================================
         const totalRevenue = (vendas || []).reduce((sum, v) => {
-            return sum + (parseFloat(v.total_value) || (parseFloat(v.value) * parseInt(v.quantity)));
+            const totalValue = parseFloat(v.total_value);
+            if (!isNaN(totalValue) && totalValue > 0) {
+                return sum + totalValue;
+            }
+            const value = parseFloat(v.value) || 0;
+            const quantity = parseInt(v.quantity) || 0;
+            return sum + (value * quantity);
         }, 0);
         
-        const totalExpenses = (despesas || []).reduce((sum, d) => sum + parseFloat(d.value || 0), 0);
+        // CORREÇÃO: Garantir que despesas sejam sempre POSITIVAS
+        const totalExpenses = (despesas || []).reduce((sum, d) => {
+            const valor = Math.abs(parseFloat(d.value) || 0); // Math.abs garante valor positivo
+            console.log(`💰 Despesa: ${d.description} = ${valor} (original: ${d.value})`);
+            return sum + valor;
+        }, 0);
+        
         const netProfit = totalRevenue - totalExpenses;
         const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
         const expensePercentage = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
         const averageTicket = (vendas || []).length > 0 ? totalRevenue / vendas.length : 0;
         
-        console.log('📈 Totais:', {
+        console.log('📈 Totais calculados:', {
             receita: totalRevenue,
             despesas: totalExpenses,
             lucro: netProfit,
@@ -184,18 +186,13 @@ async function updateDashboard(period) {
         document.getElementById('totalClients').textContent = totalClientes || 0;
         document.getElementById('totalProducts').textContent = totalProdutos || 0;
         
-        // Atualizar indicadores
         document.getElementById('profitMargin').textContent = profitMargin.toFixed(2) + '%';
         document.getElementById('expensePercentage').textContent = expensePercentage.toFixed(2) + '%';
         document.getElementById('averageTicket').textContent = formatCurrency(averageTicket);
         
         // Colorir lucro
         const netProfitElement = document.getElementById('netProfit');
-        if (netProfit >= 0) {
-            netProfitElement.style.color = '#38a169';
-        } else {
-            netProfitElement.style.color = '#e53e3e';
-        }
+        netProfitElement.style.color = netProfit >= 0 ? '#38a169' : '#e53e3e';
         
         // Carregar meta
         await carregarMetaDashboard();
@@ -208,16 +205,12 @@ async function updateDashboard(period) {
     }
 }
 
-// ============================================
-// META NO DASHBOARD
-// ============================================
 async function carregarMetaDashboard() {
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
     
     try {
-        // Buscar meta do mês
         const { data: goal } = await supabaseClient
             .from('monthly_goals')
             .select('*')
@@ -225,7 +218,6 @@ async function carregarMetaDashboard() {
             .eq('year', year)
             .single();
         
-        // Buscar faturamento atual do mês
         const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
         const endDate = new Date().toISOString().split('T')[0];
         
@@ -249,8 +241,7 @@ async function carregarMetaDashboard() {
                 <div style="background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 4px;">
                     <div style="background: ${percentual >= 100 ? '#38a169' : percentual >= 50 ? '#d69e2e' : '#e53e3e'}; 
                          height: 100%; width: ${Math.min(percentual, 100)}%; 
-                         border-radius: 3px; transition: width 0.5s;">
-                    </div>
+                         border-radius: 3px; transition: width 0.5s;"></div>
                 </div>
                 <div style="text-align: center; font-size: 13px; margin-top: 3px; font-weight: 600;
                      color: ${percentual >= 100 ? '#38a169' : percentual >= 50 ? '#d69e2e' : '#e53e3e'};">
@@ -265,16 +256,10 @@ async function carregarMetaDashboard() {
         }
     } catch (error) {
         console.error('Erro ao carregar meta:', error);
-        document.getElementById('dashMeta').textContent = 'R$ 0,00';
-        document.getElementById('dashMetaProgress').innerHTML = '';
     }
 }
 
-// ============================================
-// ATUALIZAR GRÁFICOS
-// ============================================
 async function updateCharts(period) {
-    // Destruir gráficos existentes
     Object.values(charts).forEach(chart => {
         try { chart.destroy(); } catch(e) {}
     });
@@ -282,7 +267,6 @@ async function updateCharts(period) {
     
     const { startDate, endDate } = getDateRange(period);
     
-    // Buscar todas as vendas e despesas do período
     const { data: allSales } = await supabaseClient
         .from('sales')
         .select('*')
@@ -298,7 +282,6 @@ async function updateCharts(period) {
     const vendas = allSales || [];
     const despesas = allExpenses || [];
     
-    // Agrupar por mês
     const months = getMonthsInRange(startDate, endDate);
     const monthlyData = months.map(month => {
         const monthSales = vendas.filter(s => (s.sale_date || s.created_at).startsWith(month));
@@ -307,19 +290,18 @@ async function updateCharts(period) {
         return {
             month: formatMonth(month),
             revenue: monthSales.reduce((sum, s) => sum + (parseFloat(s.total_value) || parseFloat(s.value) * parseInt(s.quantity)), 0),
-            expenses: monthExpenses.reduce((sum, e) => sum + parseFloat(e.value || 0), 0),
+            // CORREÇÃO: Math.abs para garantir valor positivo
+            expenses: monthExpenses.reduce((sum, e) => sum + Math.abs(parseFloat(e.value) || 0), 0),
             profit: 0
         };
     });
     
-    // Calcular lucro
     monthlyData.forEach(d => {
         d.profit = d.revenue - d.expenses;
     });
     
     const labels = monthlyData.map(d => d.month);
     
-    // Verificar se os canvas existem
     const revenueCanvas = document.getElementById('revenueChart');
     const expensesCanvas = document.getElementById('expensesChart');
     const profitCanvas = document.getElementById('profitChart');
@@ -330,7 +312,6 @@ async function updateCharts(period) {
         return;
     }
     
-    // Gráfico de Receitas
     charts.revenue = new Chart(revenueCanvas.getContext('2d'), {
         type: 'bar',
         data: {
@@ -346,20 +327,10 @@ async function updateCharts(period) {
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toFixed(0);
-                        }
-                    }
-                }
-            }
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toFixed(0) } } }
         }
     });
     
-    // Gráfico de Despesas
     charts.expenses = new Chart(expensesCanvas.getContext('2d'), {
         type: 'bar',
         data: {
@@ -375,20 +346,10 @@ async function updateCharts(period) {
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toFixed(0);
-                        }
-                    }
-                }
-            }
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toFixed(0) } } }
         }
     });
     
-    // Gráfico de Lucro
     charts.profit = new Chart(profitCanvas.getContext('2d'), {
         type: 'line',
         data: {
@@ -405,19 +366,10 @@ async function updateCharts(period) {
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toFixed(0);
-                        }
-                    }
-                }
-            }
+            scales: { y: { ticks: { callback: v => 'R$ ' + v.toFixed(0) } } }
         }
     });
     
-    // Gráfico Comparativo
     charts.comparison = new Chart(comparisonCanvas.getContext('2d'), {
         type: 'bar',
         data: {
@@ -441,25 +393,13 @@ async function updateCharts(period) {
         },
         options: {
             responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + value.toFixed(0);
-                        }
-                    }
-                }
-            }
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toFixed(0) } } }
         }
     });
     
     console.log('📊 Gráficos atualizados!');
 }
 
-// ============================================
-// FUNÇÕES AUXILIARES
-// ============================================
 function getDateRange(period) {
     const now = new Date();
     let startDate, endDate;
@@ -490,38 +430,29 @@ function getDateRange(period) {
             endDate = now;
     }
     
-    return {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-    };
+    return { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
 }
 
 function getMonthsInRange(startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const months = [];
-    
     let current = new Date(start.getFullYear(), start.getMonth(), 1);
     while (current <= end) {
         months.push(current.toISOString().substring(0, 7));
         current.setMonth(current.getMonth() + 1);
     }
-    
     return months;
 }
 
 function formatMonth(monthStr) {
     const [year, month] = monthStr.split('-');
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return `${months[parseInt(month) - 1]}/${year}`;
 }
 
 function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value || 0);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 }
 
 console.log('✅ Dashboard carregado!');

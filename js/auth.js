@@ -1,12 +1,13 @@
-// js/auth.js - Substitua TODO o conteúdo por este arquivo
+// js/auth.js - Versão Final Simplificada (Sem loops)
+console.log('🔐 Carregando módulo de autenticação...');
 
 class Auth {
     constructor() {
         this.currentUser = null;
         this.session = null;
+        this.loginEventFired = false; // Controle para evitar múltiplos disparos
     }
     
-    // Método para obter o cliente Supabase
     getSupabase() {
         return window.supabaseClient;
     }
@@ -37,6 +38,11 @@ class Auth {
                 this.currentUser = session.user;
                 this.showApp();
                 console.log('✅ Sessão restaurada');
+                
+                // Carregar dashboard diretamente (sem evento)
+                setTimeout(() => {
+                    this.carregarDashboard();
+                }, 500);
             }
             
             return true;
@@ -72,6 +78,8 @@ class Auth {
                     message = 'E-mail ou senha incorretos';
                 } else if (message.includes('Email not confirmed')) {
                     message = 'E-mail não confirmado';
+                } else if (message.includes('rate limit')) {
+                    message = 'Muitas tentativas. Aguarde um momento';
                 }
                 
                 return { success: false, message };
@@ -83,9 +91,18 @@ class Auth {
             
             this.session = data.session;
             this.currentUser = data.user;
+            this.loginEventFired = false;
+            
+            // Mostrar a tela do app
             this.showApp();
             
             console.log('✅ Login realizado com sucesso');
+            
+            // Carregar dashboard após um delay
+            setTimeout(() => {
+                this.carregarDashboard();
+            }, 800);
+            
             return { success: true };
             
         } catch (error) {
@@ -94,6 +111,39 @@ class Auth {
                 success: false, 
                 message: error.message || 'Erro ao fazer login' 
             };
+        }
+    }
+    
+    // Função única para carregar o dashboard
+    carregarDashboard() {
+        // Evitar múltiplas chamadas
+        if (this.loginEventFired) {
+            console.log('⏭️ Dashboard já foi carregado, ignorando...');
+            return;
+        }
+        
+        this.loginEventFired = true;
+        console.log('📊 Carregando dashboard...');
+        
+        // Tentar via app
+        if (typeof app !== 'undefined' && app) {
+            if (!app.initialized) {
+                app.init().then(() => {
+                    if (app.initialized) {
+                        app.navigateTo('dashboard');
+                    }
+                });
+            } else {
+                app.navigateTo('dashboard');
+            }
+            return;
+        }
+        
+        // Fallback: carregar diretamente
+        if (typeof loadDashboard === 'function') {
+            loadDashboard();
+        } else {
+            console.error('❌ loadDashboard não encontrada');
         }
     }
     
@@ -110,6 +160,7 @@ class Auth {
         
         this.currentUser = null;
         this.session = null;
+        this.loginEventFired = false;
         this.showLogin();
     }
     
@@ -124,13 +175,15 @@ class Auth {
         }
 
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin
+            });
             
             if (error) throw error;
             
             return { 
                 success: true, 
-                message: 'E-mail de recuperação enviado! Verifique sua caixa de entrada.' 
+                message: '✅ E-mail de recuperação enviado! Verifique sua caixa de entrada.' 
             };
         } catch (error) {
             console.error('❌ Erro:', error.message);
@@ -166,6 +219,16 @@ class Auth {
         
         const loginForm = document.getElementById('loginForm');
         if (loginForm) loginForm.reset();
+        
+        const errorDiv = document.getElementById('loginError');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+        
+        const contentArea = document.getElementById('contentArea');
+        if (contentArea) {
+            contentArea.innerHTML = '';
+        }
     }
     
     isAuthenticated() {
@@ -176,37 +239,48 @@ class Auth {
 // Criar instância global
 const auth = new Auth();
 
-// Inicializar quando o DOM estiver pronto
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Iniciando aplicação...');
     
-    // Aguardar Supabase inicializar
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Aguardar Supabase com retry
+    let tentativas = 0;
+    const maxTentativas = 30;
     
-    // Verificar se Supabase está disponível
-    if (!window.supabaseClient) {
-        console.error('❌ Supabase não encontrado');
+    while (tentativas < maxTentativas) {
+        if (window.supabaseClient && window.supabaseClient.auth) {
+            console.log('✅ Supabase pronto!');
+            break;
+        }
+        tentativas++;
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    if (!window.supabaseClient || !window.supabaseClient.auth) {
+        console.error('❌ Supabase não inicializou');
         const errorDiv = document.getElementById('loginError');
         if (errorDiv) {
-            errorDiv.innerHTML = `
-                <strong>⚠️ Erro de Configuração</strong><br>
-                Verifique:<br>
-                1. Conexão com internet<br>
-                2. Configurações em js/config.js<br>
-                3. Console do navegador (F12)
-            `;
+            errorDiv.innerHTML = '<strong>⚠️ Erro de Conexão</strong><br>Não foi possível conectar ao servidor.';
             errorDiv.style.display = 'block';
         }
         return;
     }
     
     // Inicializar autenticação
+    console.log('🔐 Verificando sessão...');
     await auth.init();
     
     // Configurar eventos
     setupEvents();
+    
+    console.log('✅ Pronto!');
 });
 
+// ============================================
+// EVENTOS
+// ============================================
 function setupEvents() {
     // Login Form
     const loginForm = document.getElementById('loginForm');
@@ -214,16 +288,13 @@ function setupEvents() {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('email')?.value;
+            const email = document.getElementById('email')?.value?.trim();
             const password = document.getElementById('password')?.value;
             const btnLogin = document.getElementById('btnLogin');
             const errorDiv = document.getElementById('loginError');
             
             if (!email || !password) {
-                if (errorDiv) {
-                    errorDiv.textContent = 'Preencha todos os campos';
-                    errorDiv.style.display = 'block';
-                }
+                showError(errorDiv, 'Preencha todos os campos');
                 return;
             }
             
@@ -237,10 +308,7 @@ function setupEvents() {
             const result = await auth.login(email, password);
             
             if (!result.success) {
-                if (errorDiv) {
-                    errorDiv.textContent = result.message;
-                    errorDiv.style.display = 'block';
-                }
+                showError(errorDiv, result.message);
                 if (btnLogin) {
                     btnLogin.disabled = false;
                     btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
@@ -252,25 +320,22 @@ function setupEvents() {
     // Forgot Password
     document.getElementById('forgotPassword')?.addEventListener('click', (e) => {
         e.preventDefault();
-        const loginFormDiv = document.querySelector('.login-form');
-        const resetDiv = document.getElementById('resetPasswordForm');
-        if (loginFormDiv) loginFormDiv.style.display = 'none';
-        if (resetDiv) resetDiv.style.display = 'block';
+        document.querySelector('.login-form').style.display = 'none';
+        document.getElementById('resetPasswordForm').style.display = 'block';
+        document.getElementById('loginError').style.display = 'none';
     });
     
     // Back to Login
     document.getElementById('backToLogin')?.addEventListener('click', () => {
-        const loginFormDiv = document.querySelector('.login-form');
-        const resetDiv = document.getElementById('resetPasswordForm');
-        if (loginFormDiv) loginFormDiv.style.display = 'block';
-        if (resetDiv) resetDiv.style.display = 'none';
+        document.querySelector('.login-form').style.display = 'block';
+        document.getElementById('resetPasswordForm').style.display = 'none';
     });
     
     // Reset Password
     document.getElementById('resetForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const email = document.getElementById('resetEmail')?.value;
+        const email = document.getElementById('resetEmail')?.value?.trim();
         const messageDiv = document.getElementById('resetMessage');
         
         if (!email) {
@@ -292,10 +357,24 @@ function setupEvents() {
     });
     
     // Logout
-    document.getElementById('logoutBtn')?.addEventListener('click', () => auth.logout());
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        if (confirm('Deseja realmente sair?')) {
+            auth.logout();
+        }
+    });
     
     // Menu Mobile
     document.getElementById('menuToggle')?.addEventListener('click', () => {
         document.getElementById('sidebar')?.classList.toggle('show');
     });
 }
+
+function showError(errorDiv, message) {
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+window.auth = auth;
+console.log('✅ Auth carregado!');
