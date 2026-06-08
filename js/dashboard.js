@@ -1,4 +1,4 @@
-// js/dashboard.js - Dashboard Corrigido
+// js/dashboard.js - Dashboard com Metas
 console.log('📦 Carregando dashboard...');
 
 let charts = {};
@@ -32,12 +32,19 @@ async function loadDashboard() {
             </div>
             
             <div class="stat-card warning">
+                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                <div class="stat-value" id="dashMeta">R$ 0,00</div>
+                <div class="stat-label">Meta do Mês</div>
+                <div id="dashMetaProgress" style="margin-top: 8px; font-size: 12px; color: #718096;"></div>
+            </div>
+            
+            <div class="stat-card info">
                 <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-value" id="totalClients">0</div>
                 <div class="stat-label">Clientes</div>
             </div>
             
-            <div class="stat-card info">
+            <div class="stat-card" style="border-left: 4px solid #805ad5;">
                 <div class="stat-icon"><i class="fas fa-box"></i></div>
                 <div class="stat-value" id="totalProducts">0</div>
                 <div class="stat-label">Produtos</div>
@@ -96,7 +103,7 @@ async function loadDashboard() {
     `;
     
     // Carregar dados iniciais
-    await updateDashboard('today');
+    await updateDashboard('month');
     
     // Event listeners para filtros
     document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -190,11 +197,76 @@ async function updateDashboard(period) {
             netProfitElement.style.color = '#e53e3e';
         }
         
+        // Carregar meta
+        await carregarMetaDashboard();
+        
         // Atualizar gráficos
         await updateCharts(period);
         
     } catch (error) {
         console.error('❌ Erro ao atualizar dashboard:', error);
+    }
+}
+
+// ============================================
+// META NO DASHBOARD
+// ============================================
+async function carregarMetaDashboard() {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    
+    try {
+        // Buscar meta do mês
+        const { data: goal } = await supabaseClient
+            .from('monthly_goals')
+            .select('*')
+            .eq('month', month)
+            .eq('year', year)
+            .single();
+        
+        // Buscar faturamento atual do mês
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date().toISOString().split('T')[0];
+        
+        const { data: vendasMes } = await supabaseClient
+            .from('sales')
+            .select('*')
+            .gte('sale_date', startDate)
+            .lte('sale_date', endDate);
+        
+        const faturamentoAtual = (vendasMes || []).reduce((sum, v) => 
+            sum + (parseFloat(v.total_value) || parseFloat(v.value) * parseInt(v.quantity)), 0);
+        
+        if (goal) {
+            const percentual = goal.revenue_goal > 0 ? (faturamentoAtual / goal.revenue_goal) * 100 : 0;
+            
+            document.getElementById('dashMeta').textContent = formatCurrency(goal.revenue_goal);
+            document.getElementById('dashMetaProgress').innerHTML = `
+                <div style="font-size: 11px; color: #718096;">
+                    Alcançado: ${formatCurrency(faturamentoAtual)}
+                </div>
+                <div style="background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 4px;">
+                    <div style="background: ${percentual >= 100 ? '#38a169' : percentual >= 50 ? '#d69e2e' : '#e53e3e'}; 
+                         height: 100%; width: ${Math.min(percentual, 100)}%; 
+                         border-radius: 3px; transition: width 0.5s;">
+                    </div>
+                </div>
+                <div style="text-align: center; font-size: 13px; margin-top: 3px; font-weight: 600;
+                     color: ${percentual >= 100 ? '#38a169' : percentual >= 50 ? '#d69e2e' : '#e53e3e'};">
+                    ${percentual.toFixed(1)}%
+                </div>
+            `;
+        } else {
+            document.getElementById('dashMeta').textContent = 'R$ 0,00';
+            document.getElementById('dashMetaProgress').innerHTML = `
+                <span style="color: #3182ce; font-size: 12px;">📌 Defina uma meta em Vendas</span>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar meta:', error);
+        document.getElementById('dashMeta').textContent = 'R$ 0,00';
+        document.getElementById('dashMetaProgress').innerHTML = '';
     }
 }
 
@@ -382,7 +454,7 @@ async function updateCharts(period) {
         }
     });
     
-    console.log('📊 Gráficos atualizados:', monthlyData);
+    console.log('📊 Gráficos atualizados!');
 }
 
 // ============================================

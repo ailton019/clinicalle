@@ -1,47 +1,4 @@
-// Função de salvar venda
-async function salvarVenda(e) {
-    e.preventDefault();
-    
-    const vendaData = {
-        client_id: document.getElementById('saleClient')?.value,
-        product_id: document.getElementById('saleProduct')?.value,
-        quantity: parseInt(document.getElementById('saleQuantity')?.value) || 1,
-        value: parseFloat((document.getElementById('saleUnitValue')?.value || '0').replace(',', '.')),
-        sale_date: document.getElementById('saleDate')?.value,
-        total_value: 0,
-        created_at: new Date().toISOString()
-    };
-    
-    vendaData.total_value = vendaData.quantity * vendaData.value;
-    
-    // Validações
-    if (!vendaData.client_id) { alert('Selecione um cliente!'); return false; }
-    if (!vendaData.product_id) { alert('Selecione um produto!'); return false; }
-    
-    console.log('📤 Enviando venda:', vendaData);
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('sales')
-            .insert(vendaData)
-            .select();
-        
-        console.log('✅ Resultado:', data, error);
-        
-        if (error) throw error;
-        
-        alert('✅ Venda registrada com sucesso!');
-        closeModal('saleModal');
-        await carregarVendas();
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        alert('Erro ao registrar venda: ' + error.message);
-    }
-    
-    return false;
-}
-// js/sales.js - Módulo de Vendas Simplificado
+// js/sales.js - Módulo de Vendas com Metas Mensais
 console.log('📦 Carregando sales.js...');
 
 // Função principal que é chamada pelo menu
@@ -56,7 +13,7 @@ function loadSales() {
     
     document.getElementById('pageTitle').textContent = 'Vendas';
     
-    // HTML básico do módulo
+    // HTML do módulo
     contentArea.innerHTML = `
         <div class="stats-grid" style="margin-bottom: 30px;">
             <div class="stat-card success">
@@ -73,6 +30,14 @@ function loadSales() {
                 <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                 <div class="stat-value" id="ticketMedio">R$ 0,00</div>
                 <div class="stat-label">Ticket Médio</div>
+            </div>
+            <div class="stat-card warning" onclick="showGoalModal()" style="cursor: pointer;" title="Clique para definir meta mensal">
+                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                <div class="stat-value" id="metaMensal">R$ 0,00</div>
+                <div class="stat-label">Meta do Mês</div>
+                <div id="metaProgresso" style="margin-top: 8px; font-size: 12px; color: #718096;">
+                    <span style="color: #3182ce; cursor: pointer;">📌 Clique para definir meta</span>
+                </div>
             </div>
         </div>
         
@@ -177,6 +142,46 @@ function loadSales() {
                 </form>
             </div>
         </div>
+        
+        <!-- Modal de Meta Mensal -->
+        <div id="goalModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-bullseye"></i> Meta Mensal</h3>
+                    <button class="modal-close" onclick="closeModal('goalModal')">&times;</button>
+                </div>
+                
+                <form id="goalForm" onsubmit="return salvarMeta(event)">
+                    <input type="hidden" id="goalId">
+                    
+                    <div class="form-group">
+                        <label>Mês de Referência *</label>
+                        <input type="month" id="goalMonth" required style="width: 100%; padding: 12px;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-dollar-sign"></i> Meta de Faturamento (R$) *</label>
+                        <input type="text" id="goalRevenue" required placeholder="0,00" 
+                               class="money-input" oninput="formatGoalMoney(this)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-shopping-cart"></i> Meta de Vendas (Quantidade) *</label>
+                        <input type="number" id="goalSales" required min="1" placeholder="30">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-users"></i> Meta de Novos Clientes</label>
+                        <input type="number" id="goalClients" min="0" placeholder="15">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Meta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     `;
     
     // Configurar data atual
@@ -186,6 +191,7 @@ function loadSales() {
     carregarClientesSelect();
     carregarProdutosSelect();
     carregarVendas();
+    carregarMetaAtual();
     
     // Event listeners
     document.getElementById('searchSale').addEventListener('input', function() {
@@ -204,7 +210,7 @@ function loadSales() {
 }
 
 // ============================================
-// FUNÇÕES AUXILIARES
+// FUNÇÕES DE CLIENTES E PRODUTOS
 // ============================================
 
 async function carregarClientesSelect() {
@@ -286,6 +292,10 @@ function calcularTotal() {
     }
 }
 
+// ============================================
+// SALVAR VENDA
+// ============================================
+
 async function salvarVenda(e) {
     e.preventDefault();
     
@@ -320,6 +330,7 @@ async function salvarVenda(e) {
         alert('✅ Venda registrada com sucesso!');
         closeModal('saleModal');
         carregarVendas();
+        carregarMetaAtual(); // Atualizar meta após venda
         
     } catch (error) {
         console.error('Erro ao salvar:', error);
@@ -328,6 +339,10 @@ async function salvarVenda(e) {
     
     return false;
 }
+
+// ============================================
+// CARREGAR VENDAS
+// ============================================
 
 async function carregarVendas(searchTerm = '') {
     const tbody = document.getElementById('salesTableBody');
@@ -405,10 +420,160 @@ async function excluirVenda(id) {
         const { error } = await supabaseClient.from('sales').delete().eq('id', id);
         if (error) throw error;
         carregarVendas();
+        carregarMetaAtual(); // Atualizar meta após excluir
     } catch (error) {
         alert('Erro ao excluir: ' + error.message);
     }
 }
+
+// ============================================
+// METAS MENSAIS
+// ============================================
+
+async function showGoalModal() {
+    const now = new Date();
+    const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    document.getElementById('goalMonth').value = monthStr;
+    
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('monthly_goals')
+            .select('*')
+            .eq('month', month)
+            .eq('year', year)
+            .single();
+        
+        if (data) {
+            document.getElementById('goalId').value = data.id;
+            document.getElementById('goalRevenue').value = formatMoneyValue(data.revenue_goal);
+            document.getElementById('goalSales').value = data.sales_goal;
+            document.getElementById('goalClients').value = data.clients_goal || 0;
+        } else {
+            document.getElementById('goalId').value = '';
+            document.getElementById('goalRevenue').value = '';
+            document.getElementById('goalSales').value = '';
+            document.getElementById('goalClients').value = '';
+        }
+    } catch (error) {
+        document.getElementById('goalId').value = '';
+    }
+    
+    document.getElementById('goalModal').classList.add('show');
+}
+
+async function salvarMeta(e) {
+    e.preventDefault();
+    
+    const goalId = document.getElementById('goalId').value;
+    const monthStr = document.getElementById('goalMonth').value;
+    const [year, month] = monthStr.split('-').map(Number);
+    const revenueGoal = parseMoneyValue(document.getElementById('goalRevenue').value);
+    const salesGoal = parseInt(document.getElementById('goalSales').value);
+    const clientsGoal = parseInt(document.getElementById('goalClients').value) || 0;
+    
+    if (!revenueGoal || revenueGoal <= 0) { alert('Informe a meta de faturamento!'); return false; }
+    if (!salesGoal || salesGoal < 1) { alert('Informe a meta de vendas!'); return false; }
+    
+    const goalData = {
+        month: month,
+        year: year,
+        revenue_goal: revenueGoal,
+        sales_goal: salesGoal,
+        clients_goal: clientsGoal
+    };
+    
+    try {
+        if (goalId) {
+            await supabaseClient
+                .from('monthly_goals')
+                .update({ ...goalData, updated_at: new Date().toISOString() })
+                .eq('id', goalId);
+        } else {
+            await supabaseClient
+                .from('monthly_goals')
+                .insert({ ...goalData, created_at: new Date().toISOString() });
+        }
+        
+        alert('✅ Meta salva com sucesso!');
+        closeModal('goalModal');
+        carregarMetaAtual();
+        
+    } catch (error) {
+        console.error('Erro ao salvar meta:', error);
+        alert('Erro ao salvar meta: ' + error.message);
+    }
+    
+    return false;
+}
+
+async function carregarMetaAtual() {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    
+    try {
+        // Buscar meta do mês
+        const { data: goal } = await supabaseClient
+            .from('monthly_goals')
+            .select('*')
+            .eq('month', month)
+            .eq('year', year)
+            .single();
+        
+        // Buscar vendas do mês atual
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date().toISOString().split('T')[0];
+        
+        const { data: vendasMes } = await supabaseClient
+            .from('sales')
+            .select('*')
+            .gte('sale_date', startDate)
+            .lte('sale_date', endDate);
+        
+        const faturamentoAtual = (vendasMes || []).reduce((sum, v) => 
+            sum + (parseFloat(v.total_value) || parseFloat(v.value) * parseInt(v.quantity)), 0);
+        const vendasAtual = (vendasMes || []).length;
+        
+        if (goal) {
+            const percentualFaturamento = goal.revenue_goal > 0 ? (faturamentoAtual / goal.revenue_goal) * 100 : 0;
+            const percentualVendas = goal.sales_goal > 0 ? (vendasAtual / goal.sales_goal) * 100 : 0;
+            
+            document.getElementById('metaMensal').textContent = formatCurrency(goal.revenue_goal);
+            document.getElementById('metaProgresso').innerHTML = `
+                <div style="margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                        <span>💰 Faturamento: ${percentualFaturamento.toFixed(1)}%</span>
+                        <span>🛒 Vendas: ${vendasAtual}/${goal.sales_goal}</span>
+                    </div>
+                    <div style="background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 4px;">
+                        <div style="background: ${percentualFaturamento >= 100 ? '#38a169' : percentualFaturamento >= 50 ? '#d69e2e' : '#e53e3e'}; 
+                             height: 100%; width: ${Math.min(percentualFaturamento, 100)}%; 
+                             border-radius: 3px; transition: width 0.5s;"></div>
+                    </div>
+                    <div style="text-align: center; font-size: 11px; margin-top: 3px; color: #718096;">
+                        ${formatCurrency(faturamentoAtual)} de ${formatCurrency(goal.revenue_goal)}
+                    </div>
+                </div>
+            `;
+        } else {
+            document.getElementById('metaMensal').textContent = 'R$ 0,00';
+            document.getElementById('metaProgresso').innerHTML = `
+                <span style="color: #3182ce; cursor: pointer;" onclick="showGoalModal()">
+                    📌 Clique para definir a meta do mês
+                </span>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar meta:', error);
+    }
+}
+
+// ============================================
+// FUNÇÕES AUXILIARES
+// ============================================
 
 function showSaleModal() {
     document.getElementById('saleModal').classList.add('show');
@@ -452,6 +617,29 @@ function getDateRange(period) {
     return { startDate: start.toISOString(), endDate: end.toISOString() };
 }
 
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value || 0);
+}
+
+function formatMoneyValue(value) {
+    if (!value && value !== 0) return '';
+    return parseFloat(value).toFixed(2).replace('.', ',');
+}
+
+function parseMoneyValue(value) {
+    if (!value) return 0;
+    return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function formatGoalMoney(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value === '') { input.value = ''; return; }
+    input.value = (parseFloat(value) / 100).toFixed(2).replace('.', ',');
+}
+
 // Fechar modal ao clicar fora
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
@@ -459,6 +647,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Log final
-console.log('✅ loadSales disponível:', typeof loadSales);
-console.log('✅ showSaleModal disponível:', typeof showSaleModal);
+// Exportar funções globais
+window.showSaleModal = showSaleModal;
+window.showGoalModal = showGoalModal;
+window.closeModal = closeModal;
+window.onProductChange = onProductChange;
+window.calcularTotal = calcularTotal;
+window.excluirVenda = excluirVenda;
+window.formatGoalMoney = formatGoalMoney;
+
+console.log('✅ Módulo de Vendas carregado!');
+console.log('✅ showSaleModal:', typeof showSaleModal);
+console.log('✅ showGoalModal:', typeof showGoalModal);
