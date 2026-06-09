@@ -1,11 +1,11 @@
-// js/auth.js - Versão Final Simplificada (Sem loops)
+// js/auth.js - Versão com Reset de Senha Sem Link Externo
 console.log('🔐 Carregando módulo de autenticação...');
 
 class Auth {
     constructor() {
         this.currentUser = null;
         this.session = null;
-        this.loginEventFired = false; // Controle para evitar múltiplos disparos
+        this.loginEventFired = false;
     }
     
     getSupabase() {
@@ -25,6 +25,16 @@ class Auth {
             return false;
         }
 
+        // ============================================
+        // VERIFICAR SE VEIO DO LINK DE RESET DE SENHA
+        // ============================================
+        const hash = window.location.hash;
+        if (hash && (hash.includes('type=recovery') || hash.includes('type=signup') || hash.includes('access_token'))) {
+            console.log('🔑 Detectado link de recuperação de senha!');
+            this.mostrarFormularioResetSenha();
+            return false;
+        }
+
         try {
             const { data: { session }, error } = await supabase.auth.getSession();
             
@@ -39,7 +49,6 @@ class Auth {
                 this.showApp();
                 console.log('✅ Sessão restaurada');
                 
-                // Carregar dashboard diretamente (sem evento)
                 setTimeout(() => {
                     this.carregarDashboard();
                 }, 500);
@@ -49,6 +58,111 @@ class Auth {
         } catch (error) {
             console.error('❌ Erro na inicialização:', error.message);
             return false;
+        }
+    }
+    
+    // ============================================
+    // MOSTRAR FORMULÁRIO DE RESET DE SENHA
+    // ============================================
+    mostrarFormularioResetSenha() {
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('appScreen');
+        
+        if (appScreen) appScreen.style.display = 'none';
+        if (loginScreen) {
+            loginScreen.style.display = 'flex';
+            loginScreen.innerHTML = `
+                <div class="login-box">
+                    <div class="login-header">
+                        <i class="fas fa-lock"></i>
+                        <h1>Redefinir Senha</h1>
+                        <p>Digite sua nova senha abaixo</p>
+                    </div>
+                    
+                    <form id="newPasswordForm" class="login-form">
+                        <div class="form-group">
+                            <label><i class="fas fa-key"></i> Nova Senha</label>
+                            <input type="password" id="newPassword" required 
+                                   placeholder="Mínimo 6 caracteres" minlength="6">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-check-circle"></i> Confirmar Senha</label>
+                            <input type="password" id="confirmNewPassword" required 
+                                   placeholder="Repita a senha" minlength="6">
+                        </div>
+                        
+                        <button type="submit" class="btn-login" id="btnResetPassword">
+                            <i class="fas fa-save"></i> Redefinir Senha
+                        </button>
+                        
+                        <div id="resetPasswordMessage" class="error-message" style="display: none;"></div>
+                    </form>
+                </div>
+            `;
+            
+            // Adicionar evento ao formulário
+            document.getElementById('newPasswordForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.redefinirSenha();
+            });
+        }
+    }
+    
+    // ============================================
+    // REDEFINIR SENHA APÓS LINK
+    // ============================================
+    async redefinirSenha() {
+        const supabase = this.getSupabase();
+        const password = document.getElementById('newPassword')?.value;
+        const confirmPassword = document.getElementById('confirmNewPassword')?.value;
+        const btnReset = document.getElementById('btnResetPassword');
+        const messageDiv = document.getElementById('resetPasswordMessage');
+        
+        if (!password || password.length < 6) {
+            this.showMessage(messageDiv, 'A senha deve ter no mínimo 6 caracteres', 'error');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            this.showMessage(messageDiv, 'As senhas não coincidem', 'error');
+            return;
+        }
+        
+        if (btnReset) {
+            btnReset.disabled = true;
+            btnReset.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redefinindo...';
+        }
+        
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: password
+            });
+            
+            if (error) throw error;
+            
+            this.showMessage(messageDiv, '✅ Senha redefinida com sucesso! Redirecionando...', 'success');
+            
+            // Redirecionar para o login após 2 segundos
+            setTimeout(() => {
+                window.location.href = window.location.origin + window.location.pathname;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ Erro:', error);
+            this.showMessage(messageDiv, 'Erro: ' + error.message, 'error');
+            if (btnReset) {
+                btnReset.disabled = false;
+                btnReset.innerHTML = '<i class="fas fa-save"></i> Redefinir Senha';
+            }
+        }
+    }
+    
+    showMessage(div, message, type) {
+        if (div) {
+            div.textContent = message;
+            div.style.display = 'block';
+            div.className = type === 'success' ? 'success-message' : 'error-message';
         }
     }
     
@@ -77,9 +191,9 @@ class Auth {
                 if (message.includes('Invalid login credentials')) {
                     message = 'E-mail ou senha incorretos';
                 } else if (message.includes('Email not confirmed')) {
-                    message = 'E-mail não confirmado';
+                    message = 'E-mail não confirmado. Verifique sua caixa de entrada.';
                 } else if (message.includes('rate limit')) {
-                    message = 'Muitas tentativas. Aguarde um momento';
+                    message = 'Muitas tentativas. Aguarde um momento.';
                 }
                 
                 return { success: false, message };
@@ -93,12 +207,10 @@ class Auth {
             this.currentUser = data.user;
             this.loginEventFired = false;
             
-            // Mostrar a tela do app
             this.showApp();
             
             console.log('✅ Login realizado com sucesso');
             
-            // Carregar dashboard após um delay
             setTimeout(() => {
                 this.carregarDashboard();
             }, 800);
@@ -114,9 +226,7 @@ class Auth {
         }
     }
     
-    // Função única para carregar o dashboard
     carregarDashboard() {
-        // Evitar múltiplas chamadas
         if (this.loginEventFired) {
             console.log('⏭️ Dashboard já foi carregado, ignorando...');
             return;
@@ -125,7 +235,6 @@ class Auth {
         this.loginEventFired = true;
         console.log('📊 Carregando dashboard...');
         
-        // Tentar via app
         if (typeof app !== 'undefined' && app) {
             if (!app.initialized) {
                 app.init().then(() => {
@@ -139,7 +248,6 @@ class Auth {
             return;
         }
         
-        // Fallback: carregar diretamente
         if (typeof loadDashboard === 'function') {
             loadDashboard();
         } else {
@@ -170,26 +278,41 @@ class Auth {
         if (!supabase || !supabase.auth) {
             return { 
                 success: false, 
-                message: 'Serviço indisponível' 
+                message: 'Serviço indisponível. Tente novamente.' 
             };
         }
 
         try {
+            console.log('📧 Enviando recuperação para:', email);
+            
+            // URL de redirecionamento - VOLTA PARA O PRÓPRIO SITE
+            const redirectUrl = window.location.origin + window.location.pathname;
+            
+            console.log('🔗 URL de retorno:', redirectUrl);
+            
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin
+                redirectTo: redirectUrl
             });
             
             if (error) throw error;
             
             return { 
                 success: true, 
-                message: '✅ E-mail de recuperação enviado! Verifique sua caixa de entrada.' 
+                message: '✅ E-mail enviado! Verifique sua caixa de entrada e spam.\n\nClique no link recebido para redefinir sua senha.' 
             };
         } catch (error) {
             console.error('❌ Erro:', error.message);
+            
+            let msg = error.message;
+            if (msg.includes('rate limit')) {
+                msg = 'Aguarde 60 segundos antes de tentar novamente.';
+            } else if (msg.includes('not found') || msg.includes('not exist')) {
+                msg = 'E-mail não encontrado. Verifique se está correto.';
+            }
+            
             return { 
                 success: false, 
-                message: error.message || 'Erro ao enviar e-mail' 
+                message: msg || 'Erro ao enviar e-mail. Tente novamente.' 
             };
         }
     }
@@ -229,6 +352,11 @@ class Auth {
         if (contentArea) {
             contentArea.innerHTML = '';
         }
+        
+        // Recarregar a página para limpar o hash da URL
+        if (window.location.hash) {
+            window.location.hash = '';
+        }
     }
     
     isAuthenticated() {
@@ -245,7 +373,6 @@ const auth = new Auth();
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Iniciando aplicação...');
     
-    // Aguardar Supabase com retry
     let tentativas = 0;
     const maxTentativas = 30;
     
@@ -268,12 +395,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Inicializar autenticação
-    console.log('🔐 Verificando sessão...');
+    // IMPORTANTE: Verificar se veio do link de reset ANTES de init
     await auth.init();
     
-    // Configurar eventos
-    setupEvents();
+    // Só configura eventos se NÃO estiver na tela de reset
+    if (!document.getElementById('newPasswordForm')) {
+        setupEvents();
+    }
     
     console.log('✅ Pronto!');
 });
@@ -329,14 +457,17 @@ function setupEvents() {
     document.getElementById('backToLogin')?.addEventListener('click', () => {
         document.querySelector('.login-form').style.display = 'block';
         document.getElementById('resetPasswordForm').style.display = 'none';
+        const msg = document.getElementById('resetMessage');
+        if (msg) msg.style.display = 'none';
     });
     
-    // Reset Password
+    // Reset Password Form
     document.getElementById('resetForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const email = document.getElementById('resetEmail')?.value?.trim();
         const messageDiv = document.getElementById('resetMessage');
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         
         if (!email) {
             if (messageDiv) {
@@ -347,12 +478,22 @@ function setupEvents() {
             return;
         }
         
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        }
+        
         const result = await auth.resetPassword(email);
         
         if (messageDiv) {
             messageDiv.textContent = result.message;
             messageDiv.className = result.success ? 'success-message' : 'error-message';
             messageDiv.style.display = 'block';
+        }
+        
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
         }
     });
     
@@ -375,6 +516,21 @@ function showError(errorDiv, message) {
         errorDiv.style.display = 'block';
     }
 }
+
+// Adicionar estilo para mensagem de sucesso
+const style = document.createElement('style');
+style.textContent = `
+    .success-message {
+        background: #c6f6d5 !important;
+        color: #22543d !important;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 14px;
+        border-left: 4px solid #38a169 !important;
+    }
+`;
+document.head.appendChild(style);
 
 window.auth = auth;
 console.log('✅ Auth carregado!');
