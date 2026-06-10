@@ -1,4 +1,4 @@
-// js/sales.js - Módulo de Vendas com Busca por Digitação e Desconto
+// js/sales.js - Módulo de Vendas com Busca por Digitação, Desconto e Filtro de Data
 console.log('📦 Carregando sales.js...');
 
 // ============================================
@@ -6,6 +6,10 @@ console.log('📦 Carregando sales.js...');
 // ============================================
 let todosClientes = [];
 let todosProdutos = [];
+let currentSearchTerm = '';
+let currentDateFilter = 'today';
+let customStartDate = null;
+let customEndDate = null;
 
 // ============================================
 // FUNÇÃO PRINCIPAL
@@ -49,13 +53,31 @@ function loadSales() {
             </div>
         </div>
         
-        <!-- Filtros -->
+        <!-- Filtros de Período -->
         <div class="filters-bar">
-            <button class="filter-btn active" data-period="today">Hoje</button>
-            <button class="filter-btn" data-period="7days">7 Dias</button>
-            <button class="filter-btn" data-period="30days">30 Dias</button>
-            <button class="filter-btn" data-period="month">Este Mês</button>
-            <button class="filter-btn" data-period="all">Todos</button>
+            <button class="filter-btn ${currentDateFilter === 'today' ? 'active' : ''}" data-period="today">Hoje</button>
+            <button class="filter-btn ${currentDateFilter === '7days' ? 'active' : ''}" data-period="7days">7 Dias</button>
+            <button class="filter-btn ${currentDateFilter === '30days' ? 'active' : ''}" data-period="30days">30 Dias</button>
+            <button class="filter-btn ${currentDateFilter === 'month' ? 'active' : ''}" data-period="month">Este Mês</button>
+            <button class="filter-btn ${currentDateFilter === 'custom' ? 'active' : ''}" data-period="custom">Personalizado</button>
+            <button class="filter-btn ${currentDateFilter === 'all' ? 'active' : ''}" data-period="all">Todas</button>
+        </div>
+        
+        <!-- Filtro de Data Personalizado -->
+        <div id="customDateFilter" style="display: ${currentDateFilter === 'custom' ? 'flex' : 'none'}; gap: 10px; margin-bottom: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+            <div class="form-group" style="flex: 1;">
+                <label>Data Início</label>
+                <input type="date" id="customStartDate" value="${customStartDate || ''}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Data Fim</label>
+                <input type="date" id="customEndDate" value="${customEndDate || ''}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+                <button class="btn-primary" onclick="aplicarFiltroPersonalizado()" style="padding: 10px 20px;">
+                    <i class="fas fa-search"></i> Aplicar
+                </button>
+            </div>
         </div>
         
         <!-- Tabela de Vendas -->
@@ -65,7 +87,8 @@ function loadSales() {
                 <div class="table-actions">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="searchSale" placeholder="Buscar por cliente ou produto...">
+                        <input type="text" id="searchSale" placeholder="Buscar por cliente ou produto..." 
+                               value="${currentSearchTerm}">
                     </div>
                     <button class="btn-primary" onclick="showSaleModal()">
                         <i class="fas fa-plus"></i> Nova Venda
@@ -74,7 +97,7 @@ function loadSales() {
             </div>
             
             <div style="overflow-x: auto;">
-                <table>
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -98,9 +121,7 @@ function loadSales() {
             </div>
         </div>
         
-        <!-- ============================================ -->
         <!-- MODAL DE VENDA -->
-        <!-- ============================================ -->
         <div id="saleModal" class="modal">
             <div class="modal-content" style="max-width: 650px;">
                 <div class="modal-header">
@@ -109,7 +130,18 @@ function loadSales() {
                 </div>
                 
                 <form id="saleForm" onsubmit="return salvarVenda(event)">
-                
+                    
+                    <!-- DATA DA VENDA - AUTOMÁTICA MAS EDITÁVEL -->
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Data da Venda *</label>
+                        <input type="datetime-local" id="saleDate" required 
+                               value="${new Date().toISOString().slice(0, 16)}"
+                               style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px;">
+                        <small style="color: #718096; display: block; margin-top: 5px;">
+                            <i class="fas fa-info-circle"></i> Data atual preenchida automaticamente, mas pode ser alterada
+                        </small>
+                    </div>
+                    
                     <!-- CAMPO CLIENTE COM BUSCA -->
                     <div class="form-group">
                         <label><i class="fas fa-user"></i> Cliente *</label>
@@ -171,15 +203,12 @@ function loadSales() {
                         </div>
                     </div>
                     
-                    <!-- ============================================ -->
                     <!-- CAMPO DE DESCONTO -->
-                    <!-- ============================================ -->
                     <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #fefcbf;">
                         <label style="font-weight: 600; color: #744210; margin-bottom: 10px; display: block;">
                             <i class="fas fa-tags"></i> Desconto
                         </label>
                         
-                        <!-- Seleção do tipo de desconto -->
                         <div style="display: flex; gap: 15px; margin-bottom: 10px;">
                             <label style="cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 500;">
                                 <input type="radio" name="discountType" value="percent" checked onchange="toggleDiscountType()">
@@ -191,7 +220,6 @@ function loadSales() {
                             </label>
                         </div>
                         
-                        <!-- Input de desconto -->
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input type="text" 
                                    id="saleDiscount" 
@@ -202,7 +230,6 @@ function loadSales() {
                             <span id="discountSymbol" style="font-size: 20px; font-weight: 700; color: #744210; min-width: 30px; text-align: center;">%</span>
                         </div>
                         
-                        <!-- Valor do desconto em R$ -->
                         <div id="discountValueDisplay" style="margin-top: 8px; text-align: right; font-size: 13px; color: #e53e3e; display: none;">
                             Desconto: <strong>R$ 0,00</strong>
                         </div>
@@ -211,16 +238,14 @@ function loadSales() {
                     <!-- RESUMO DA VENDA -->
                     <div id="saleResumo" style="display:none; background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                         <table style="width: 100%; font-size: 14px;">
-                            <tr>
-                                <td style="color: #718096; padding: 3px 0;">Subtotal (${document.getElementById('saleQuantity')?.value || 1}x):</td>
+                            <tr><td style="color: #718096; padding: 3px 0;">Subtotal:</td>
                                 <td style="text-align: right;" id="resumoSubtotal">R$ 0,00</td>
                             </tr>
-                            <tr>
-                                <td style="color: #718096; padding: 3px 0;">Desconto:</td>
+                            <tr><td style="color: #718096; padding: 3px 0;">Desconto:</td>
                                 <td style="text-align: right; color: #e53e3e;" id="resumoDesconto">- R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td colspan="2" style="border-top: 2px solid #e2e8f0; padding-top: 10px; margin-top: 5px;">
+                                <td colspan="2" style="border-top: 2px solid #e2e8f0; padding-top: 10px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span style="font-weight: 700; font-size: 16px;">VALOR TOTAL:</span>
                                         <span id="totalValue" style="font-weight: 700; font-size: 24px; color: #38a169;">R$ 0,00</span>
@@ -230,14 +255,6 @@ function loadSales() {
                         </table>
                     </div>
                     
-                    <!-- DATA DA VENDA -->
-                    <div class="form-group">
-                        <label><i class="fas fa-calendar"></i> Data da Venda *</label>
-                        <input type="datetime-local" id="saleDate" required 
-                               style="padding: 12px; font-size: 14px;">
-                    </div>
-                    
-                    <!-- BOTÕES -->
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" onclick="closeModal('saleModal')">
                             <i class="fas fa-times"></i> Cancelar
@@ -260,28 +277,19 @@ function loadSales() {
                 
                 <form id="goalForm" onsubmit="return salvarMeta(event)">
                     <input type="hidden" id="goalId">
-                    
                     <div class="form-group">
                         <label>Mês de Referência *</label>
                         <input type="month" id="goalMonth" required style="width: 100%; padding: 12px;">
                     </div>
-                    
                     <div class="form-group">
                         <label><i class="fas fa-dollar-sign"></i> Meta de Faturamento (R$) *</label>
                         <input type="text" id="goalRevenue" required placeholder="0,00" 
                                class="money-input" oninput="formatGoalMoney(this)">
                     </div>
-                    
                     <div class="form-group">
                         <label><i class="fas fa-shopping-cart"></i> Meta de Vendas (Qtd) *</label>
                         <input type="number" id="goalSales" required min="1" placeholder="30">
                     </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-users"></i> Meta de Novos Clientes</label>
-                        <input type="number" id="goalClients" min="0" placeholder="15">
-                    </div>
-                    
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
                         <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Meta</button>
@@ -291,22 +299,34 @@ function loadSales() {
         </div>
     `;
     
-    // Configurar data atual
-    document.getElementById('saleDate').value = new Date().toISOString().slice(0, 16);
-    
     // Carregar dados iniciais
+    carregarTodosClientes();
+    carregarTodosProdutos();
     carregarVendas();
     carregarMetaAtual();
     
     // Event listeners
-    document.getElementById('searchSale').addEventListener('input', function() {
-        carregarVendas(this.value);
-    });
+    const searchInput = document.getElementById('searchSale');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            currentSearchTerm = e.target.value;
+            carregarVendas();
+        });
+    }
     
+    // Filtros de período
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
+            currentDateFilter = this.dataset.period;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
+            
+            // Mostrar/esconder filtro personalizado
+            const customFilter = document.getElementById('customDateFilter');
+            if (customFilter) {
+                customFilter.style.display = currentDateFilter === 'custom' ? 'flex' : 'none';
+            }
+            
             carregarVendas();
         });
     });
@@ -327,6 +347,24 @@ function loadSales() {
 }
 
 // ============================================
+// FILTRO PERSONALIZADO
+// ============================================
+
+function aplicarFiltroPersonalizado() {
+    const startDate = document.getElementById('customStartDate').value;
+    const endDate = document.getElementById('customEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Selecione as datas de início e fim');
+        return;
+    }
+    
+    customStartDate = startDate;
+    customEndDate = endDate;
+    carregarVendas();
+}
+
+// ============================================
 // BUSCA DE CLIENTES
 // ============================================
 
@@ -337,6 +375,7 @@ async function carregarTodosClientes() {
             .select('id, name, phone')
             .order('name');
         todosClientes = data || [];
+        console.log(`📋 ${todosClientes.length} clientes carregados`);
     } catch (error) {
         console.error('Erro ao carregar clientes:', error);
     }
@@ -350,16 +389,19 @@ async function carregarTodosProdutos() {
             .eq('active', true)
             .order('description');
         todosProdutos = data || [];
+        console.log(`📦 ${todosProdutos.length} produtos carregados`);
     } catch (error) {
         console.error('Erro ao carregar produtos:', error);
     }
 }
 
 function mostrarListaClientes() {
-    carregarTodosClientes().then(() => {
+    if (todosClientes.length === 0) {
+        carregarTodosClientes().then(() => filtrarClientes());
+    } else {
         filtrarClientes();
-        document.getElementById('clientesLista').style.display = 'block';
-    });
+    }
+    document.getElementById('clientesLista').style.display = 'block';
 }
 
 function filtrarClientes() {
@@ -367,7 +409,7 @@ function filtrarClientes() {
     const lista = document.getElementById('clientesLista');
     
     const filtrados = todosClientes.filter(c => 
-        c.name.toLowerCase().includes(search) || c.phone.includes(search)
+        c.name.toLowerCase().includes(search) || (c.phone && c.phone.includes(search))
     );
     
     if (filtrados.length === 0) {
@@ -396,10 +438,12 @@ function selecionarCliente(id, name, phone) {
 // ============================================
 
 function mostrarListaProdutos() {
-    carregarTodosProdutos().then(() => {
+    if (todosProdutos.length === 0) {
+        carregarTodosProdutos().then(() => filtrarProdutos());
+    } else {
         filtrarProdutos();
-        document.getElementById('produtosLista').style.display = 'block';
-    });
+    }
+    document.getElementById('produtosLista').style.display = 'block';
 }
 
 function filtrarProdutos() {
@@ -457,7 +501,6 @@ function toggleDiscountType() {
     if (tipo === 'percent') {
         symbol.textContent = '%';
         display.style.display = 'none';
-        // Limitar a 100%
         if (parseFloat(input.value.replace(',', '.')) > 100) {
             input.value = '100,00';
         }
@@ -488,29 +531,26 @@ function calcularTotal() {
         let descontoPercentual = 0;
         
         if (discountType === 'percent') {
-            // Desconto em %
-            descontoPercentual = Math.min(discountValue, 100); // Máximo 100%
+            descontoPercentual = Math.min(discountValue, 100);
             descontoReal = subtotal * (descontoPercentual / 100);
         } else {
-            // Desconto em R$
-            descontoReal = Math.min(discountValue, subtotal); // Não pode ser maior que o subtotal
+            descontoReal = Math.min(discountValue, subtotal);
             descontoPercentual = subtotal > 0 ? (descontoReal / subtotal) * 100 : 0;
         }
         
         const total = subtotal - descontoReal;
         
-        // Atualizar display do desconto em R$
-        document.getElementById('discountValueDisplay').style.display = discountType === 'real' ? 'block' : 'none';
-        document.getElementById('discountValueDisplay').innerHTML = 
-            `Desconto: <strong>R$ ${descontoReal.toFixed(2)}</strong> (${descontoPercentual.toFixed(1)}%)`;
+        const discountDisplay = document.getElementById('discountValueDisplay');
+        if (discountDisplay) {
+            discountDisplay.style.display = discountType === 'real' ? 'block' : 'none';
+            discountDisplay.innerHTML = `Desconto: <strong>R$ ${descontoReal.toFixed(2)}</strong> (${descontoPercentual.toFixed(1)}%)`;
+        }
         
-        // Atualizar resumo
         resumoDiv.style.display = 'block';
         document.getElementById('resumoSubtotal').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
         document.getElementById('resumoDesconto').textContent = '- R$ ' + descontoReal.toFixed(2).replace('.', ',');
         document.getElementById('totalValue').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
         
-        // Colorir total
         const totalEl = document.getElementById('totalValue');
         if (total > 500) totalEl.style.color = '#38a169';
         else if (total > 100) totalEl.style.color = '#d69e2e';
@@ -522,7 +562,7 @@ function calcularTotal() {
 }
 
 // ============================================
-// SALVAR VENDA COM DESCONTO
+// SALVAR VENDA
 // ============================================
 
 async function salvarVenda(e) {
@@ -542,7 +582,6 @@ async function salvarVenda(e) {
     if (!quantity || quantity < 1) { alert('❌ Quantidade inválida!'); return false; }
     if (!unitValue || unitValue <= 0) { alert('❌ Valor unitário inválido!'); return false; }
     
-    // Calcular total com desconto
     const subtotal = quantity * unitValue;
     let discountPercent = 0;
     let discountReal = 0;
@@ -559,9 +598,11 @@ async function salvarVenda(e) {
     
     if (totalValue < 0) { alert('❌ O desconto não pode ser maior que o valor total!'); return false; }
     
-    // Confirmar venda
     const confirmed = confirm(
         `📋 CONFIRMAR VENDA\n\n` +
+        `Cliente: ${document.getElementById('saleClientSearch').value.split(' - ')[0]}\n` +
+        `Produto: ${document.getElementById('saleProductSearch').value}\n` +
+        `Data: ${new Date(saleDate).toLocaleString('pt-BR')}\n\n` +
         `Subtotal: R$ ${subtotal.toFixed(2)}\n` +
         `Desconto: R$ ${discountReal.toFixed(2)} (${discountPercent.toFixed(1)}%)\n` +
         `TOTAL: R$ ${totalValue.toFixed(2)}\n\n` +
@@ -604,36 +645,47 @@ async function salvarVenda(e) {
 // CARREGAR VENDAS
 // ============================================
 
-async function carregarVendas(searchTerm = '') {
+async function carregarVendas() {
     const tbody = document.getElementById('salesTableBody');
+    if (!tbody) return;
     
     try {
-        const activePeriod = document.querySelector('.filter-btn.active')?.dataset?.period || 'today';
-        
         let query = supabaseClient
             .from('sales')
             .select(`*, client:client_id (name), product:product_id (code, description)`)
-            .order('created_at', { ascending: false });
+            .order('sale_date', { ascending: false });
         
-        if (activePeriod !== 'all') {
-            const { startDate, endDate } = getDateRange(activePeriod);
-            query = query.gte('sale_date', startDate.split('T')[0]).lte('sale_date', endDate.split('T')[0]);
-        }
-        
-        if (searchTerm) {
-            query = query.or(`client.name.ilike.%${searchTerm}%,product.description.ilike.%${searchTerm}%`);
+        // Aplicar filtro de data
+        if (currentDateFilter === 'custom' && customStartDate && customEndDate) {
+            query = query.gte('sale_date', `${customStartDate}T00:00:00`)
+                         .lte('sale_date', `${customEndDate}T23:59:59`);
+        } else if (currentDateFilter !== 'all') {
+            const { startDate, endDate } = getDateRange(currentDateFilter);
+            query = query.gte('sale_date', startDate.split('T')[0])
+                         .lte('sale_date', endDate.split('T')[0]);
         }
         
         const { data, error } = await query;
         if (error) throw error;
         
-        const vendas = data || [];
+        let vendas = data || [];
+        
+        // Aplicar filtro de busca (cliente ou produto)
+        if (currentSearchTerm) {
+            const searchLower = currentSearchTerm.toLowerCase();
+            vendas = vendas.filter(v => 
+                (v.client?.name || '').toLowerCase().includes(searchLower) ||
+                (v.product?.code || '').toLowerCase().includes(searchLower) ||
+                (v.product?.description || '').toLowerCase().includes(searchLower)
+            );
+        }
         
         if (vendas.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;">
                 <i class="fas fa-shopping-cart" style="font-size:48px; color:#cbd5e0;"></i>
                 <p style="color:#718096; margin-top:15px;">Nenhuma venda encontrada</p>
             </td></tr>`;
+            
             document.getElementById('totalFaturamento').textContent = 'R$ 0,00';
             document.getElementById('totalVendas').textContent = '0';
             document.getElementById('ticketMedio').textContent = 'R$ 0,00';
@@ -643,10 +695,11 @@ async function carregarVendas(searchTerm = '') {
         tbody.innerHTML = vendas.map(v => {
             const desconto = parseFloat(v.discount_value) || 0;
             const total = parseFloat(v.total_value) || 0;
+            const dataVenda = new Date(v.sale_date || v.created_at);
             
             return `
             <tr>
-                <td>${new Date(v.sale_date || v.created_at).toLocaleDateString('pt-BR')}</td>
+                <td>${dataVenda.toLocaleDateString('pt-BR')} ${dataVenda.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
                 <td><strong>${v.client?.name || 'N/A'}</strong></td>
                 <td>${v.product?.code || ''} - ${v.product?.description || 'N/A'}</td>
                 <td style="text-align:center;">${v.quantity}x</td>
@@ -660,8 +713,8 @@ async function carregarVendas(searchTerm = '') {
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
-            </tr>
-        `}).join('');
+            </tr>`;
+        }).join('');
         
         const totalFaturamento = vendas.reduce((sum, v) => sum + parseFloat(v.total_value || 0), 0);
         document.getElementById('totalFaturamento').textContent = 'R$ ' + totalFaturamento.toFixed(2);
@@ -670,15 +723,18 @@ async function carregarVendas(searchTerm = '') {
         
     } catch (error) {
         console.error('Erro ao carregar vendas:', error);
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar vendas</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar vendas: ${error.message}</td></tr>`;
     }
 }
 
 async function excluirVenda(id) {
-    if (!confirm('Excluir esta venda?')) return;
+    if (!confirm('⚠️ Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.')) return;
+    
     try {
         const { error } = await supabaseClient.from('sales').delete().eq('id', id);
         if (error) throw error;
+        
+        alert('✅ Venda excluída com sucesso!');
         carregarVendas();
         carregarMetaAtual();
     } catch (error) {
@@ -706,12 +762,10 @@ async function showGoalModal() {
             document.getElementById('goalId').value = data.id;
             document.getElementById('goalRevenue').value = formatMoneyValue(data.revenue_goal);
             document.getElementById('goalSales').value = data.sales_goal;
-            document.getElementById('goalClients').value = data.clients_goal || 0;
         } else {
             document.getElementById('goalId').value = '';
             document.getElementById('goalRevenue').value = '';
             document.getElementById('goalSales').value = '';
-            document.getElementById('goalClients').value = '';
         }
     } catch (e) {
         document.getElementById('goalId').value = '';
@@ -725,13 +779,12 @@ async function salvarMeta(e) {
     const [year, month] = document.getElementById('goalMonth').value.split('-').map(Number);
     const revenueGoal = parseMoneyValue(document.getElementById('goalRevenue').value);
     const salesGoal = parseInt(document.getElementById('goalSales').value);
-    const clientsGoal = parseInt(document.getElementById('goalClients').value) || 0;
     
     if (!revenueGoal || revenueGoal <= 0) { alert('Informe a meta!'); return false; }
     if (!salesGoal || salesGoal < 1) { alert('Informe a meta de vendas!'); return false; }
     
     try {
-        const goalData = { month, year, revenue_goal: revenueGoal, sales_goal: salesGoal, clients_goal: clientsGoal };
+        const goalData = { month, year, revenue_goal: revenueGoal, sales_goal: salesGoal };
         if (goalId) {
             await supabaseClient.from('monthly_goals').update({ ...goalData, updated_at: new Date().toISOString() }).eq('id', goalId);
         } else {
@@ -788,9 +841,24 @@ async function carregarMetaAtual() {
 // ============================================
 
 function showSaleModal() {
-    document.getElementById('saleModal').classList.add('show');
-    document.getElementById('saleDate').value = new Date().toISOString().slice(0, 16);
-    document.getElementById('saleForm').reset();
+    const modal = document.getElementById('saleModal');
+    if (!modal) return;
+    
+    modal.classList.add('show');
+    
+    // Resetar formulário
+    const form = document.getElementById('saleForm');
+    if (form) form.reset();
+    
+    // Data atual automática
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    document.getElementById('saleDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
     document.getElementById('saleQuantity').value = '1';
     document.getElementById('saleDiscount').value = '0,00';
     document.querySelector('input[name="discountType"][value="percent"]').checked = true;
@@ -802,24 +870,45 @@ function showSaleModal() {
     document.getElementById('saleProductSearch').value = '';
     document.getElementById('saleClient').value = '';
     document.getElementById('saleProduct').value = '';
-    document.getElementById('clientesLista').style.display = 'none';
-    document.getElementById('produtosLista').style.display = 'none';
+    document.getElementById('saleUnitValue').value = '';
+    
+    const clientesLista = document.getElementById('clientesLista');
+    const produtosLista = document.getElementById('produtosLista');
+    if (clientesLista) clientesLista.style.display = 'none';
+    if (produtosLista) produtosLista.style.display = 'none';
 }
 
 function closeModal(id) {
-    document.getElementById(id)?.classList.remove('show');
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('show');
 }
 
 function getDateRange(period) {
     const now = new Date();
     let start, end;
+    
     switch(period) {
-        case 'today': start = new Date(now.getFullYear(), now.getMonth(), now.getDate()); end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59); break;
-        case '7days': start = new Date(now.getTime() - 7*24*60*60*1000); end = now; break;
-        case '30days': start = new Date(now.getTime() - 30*24*60*60*1000); end = now; break;
-        case 'month': start = new Date(now.getFullYear(), now.getMonth(), 1); end = now; break;
-        default: start = new Date(2000, 0, 1); end = now;
+        case 'today':
+            start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            break;
+        case '7days':
+            start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            end = now;
+            break;
+        case '30days':
+            start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            end = now;
+            break;
+        case 'month':
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = now;
+            break;
+        default:
+            start = new Date(2000, 0, 1);
+            end = now;
     }
+    
     return { startDate: start.toISOString(), endDate: end.toISOString() };
 }
 
@@ -851,6 +940,7 @@ document.addEventListener('click', function(e) {
 });
 
 // Exportar funções globais
+window.loadSales = loadSales;
 window.showSaleModal = showSaleModal;
 window.showGoalModal = showGoalModal;
 window.closeModal = closeModal;
@@ -864,5 +954,6 @@ window.filtrarClientes = filtrarClientes;
 window.filtrarProdutos = filtrarProdutos;
 window.mostrarListaClientes = mostrarListaClientes;
 window.mostrarListaProdutos = mostrarListaProdutos;
+window.aplicarFiltroPersonalizado = aplicarFiltroPersonalizado;
 
 console.log('✅ Módulo de Vendas carregado!');
