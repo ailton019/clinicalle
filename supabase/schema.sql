@@ -62,6 +62,7 @@ CREATE TABLE sales (
     quantity INTEGER DEFAULT 1,
     total_value DECIMAL(10,2) GENERATED ALWAYS AS (value * quantity) STORED,
     sale_date DATE NOT NULL,
+    forma_pagamento VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

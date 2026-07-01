@@ -49,9 +49,13 @@ class Auth {
                 this.showApp();
                 console.log('✅ Sessão restaurada');
                 
-                setTimeout(() => {
-                    this.carregarDashboard();
-                }, 500);
+                // Só redireciona para o dashboard se estiver na tela de login ou index.html
+                const path = window.location.pathname;
+                if (path.endsWith('login.html') || path.endsWith('index.html') || path === '/' || path.endsWith('/')) {
+                    setTimeout(() => {
+                        this.carregarDashboard();
+                    }, 500);
+                }
             }
             
             return true;
@@ -227,32 +231,8 @@ class Auth {
     }
     
     carregarDashboard() {
-        if (this.loginEventFired) {
-            console.log('⏭️ Dashboard já foi carregado, ignorando...');
-            return;
-        }
-        
-        this.loginEventFired = true;
-        console.log('📊 Carregando dashboard...');
-        
-        if (typeof app !== 'undefined' && app) {
-            if (!app.initialized) {
-                app.init().then(() => {
-                    if (app.initialized) {
-                        app.navigateTo('dashboard');
-                    }
-                });
-            } else {
-                app.navigateTo('dashboard');
-            }
-            return;
-        }
-        
-        if (typeof loadDashboard === 'function') {
-            loadDashboard();
-        } else {
-            console.error('❌ loadDashboard não encontrada');
-        }
+        console.log('📊 Redirecionando para dashboard...');
+        window.location.href = 'dashboard.html';
     }
     
     async logout() {
@@ -269,7 +249,8 @@ class Auth {
         this.currentUser = null;
         this.session = null;
         this.loginEventFired = false;
-        this.showLogin();
+        console.log('Redirecionando para login...');
+        window.location.href = 'login.html';
     }
     
     async resetPassword(email) {

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinicalle - Login</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Customizado -->
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body style="background: linear-gradient(135deg, #0b132b, #1c2541); min-height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; font-family: 'Outfit', sans-serif;">
+    <div id="loginScreen" style="display: flex; justify-content: center; align-items: center; width: 100%; padding: 20px;">
+        <div class="login-box">
+            <div class="login-header">
+                <i class="fas fa-magic"></i>
+                <h1>Clinicalle</h1>
+                <p>Gestão Inteligente para Clínicas de Estética</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> E-mail</label>
+                    <input type="email" id="email" required placeholder="seu@email.com" style="width: 100%;">
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Senha</label>
+                    <input type="password" id="password" required placeholder="Digite sua senha" style="width: 100%;">
+                </div>
+                
+
+                
+                <button type="submit" class="btn-login" id="btnLogin">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
+                
+                <div id="loginError" class="error-message" style="display: none;"></div>
+            </form>
+
+            <!-- Formulário de Recuperação de Senha -->
+            <form id="resetPasswordForm" class="login-form" style="display: none;">
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> E-mail de Recuperação</label>
+                    <input type="email" id="resetEmail" required placeholder="seu@email.com" style="width: 100%;">
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-paper-plane"></i> Enviar link de redefinição
+                </button>
+                
+                <div id="resetMessage" class="error-message" style="display: none;"></div>
+                
+                <div class="form-row" style="margin-top: 15px; text-align: center;">
+                    <a href="#" id="backToLogin" class="forgot-password"><i class="fas fa-arrow-left"></i> Voltar para o Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/login.js"></script>
+</body>
+</html>

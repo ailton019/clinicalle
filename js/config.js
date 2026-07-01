@@ -1,4 +1,11 @@
 // js/config.js
+window.onerror = function(message, source, lineno, colno, error) {
+    const errorMsg = `ERRO GLOBAL:\n${message}\nArquivo: ${source}\nLinha: ${lineno}:${colno}`;
+    console.error(errorMsg);
+    alert(errorMsg);
+    return false;
+};
+
 window.SUPABASE_CONFIG = {
     url: 'https://fmhojfyalubgzivfflwp.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaG9qZnlhbHViZ3ppdmZmbHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NTg1MzgsImV4cCI6MjA5NjMzNDUzOH0._49b5zErD0JM7NIwSC-V6bKkxB7EkeEeAc-nFkpW3Ho'  // SUA CHAVE JWT COMPLETA AQUI

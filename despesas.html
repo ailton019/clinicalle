@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinicalle - Despesas</title>
+    <!-- Otimização de Carregamento (Preconnect) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Customizado -->
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <script>
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+    </script>
+    <div id="appScreen" class="app-container" style="display: flex;">
+        <!-- Menu Lateral -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-magic"></i>
+                    <span>Clinicalle</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="clientes.html" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                </a>
+                <a href="produtos.html" class="nav-item">
+                    <i class="fas fa-box"></i>
+                    <span>Produtos</span>
+                </a>
+                <a href="vendas.html" class="nav-item">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Vendas</span>
+                </a>
+                <a href="despesas.html" class="nav-item active">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Despesas</span>
+                </a>
+                <a href="usuarios.html" class="nav-item admin-only">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Usuários</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Barra Superior -->
+            <header class="top-bar">
+                <button class="menu-toggle" id="menuToggleBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-info">
+                    <h1 class="page-title" id="pageTitle">Despesas</h1>
+                    <span class="current-date" id="currentDate">Carregando data...</span>
+                </div>
+                <div class="user-menu">
+                    <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <span class="user-name" id="userName">Carregando...</span>
+                            <span class="user-role">Profissional</span>
+                        </div>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn" title="Sair do sistema">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Área de Conteúdo Específico -->
+            <div class="content-area" id="contentArea">
+                <!-- Cards de Resumo -->
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card danger">
+                        <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="stat-value" id="totalExpenses">R$ 0,00</div>
+                        <div class="stat-label">Total de Despesas</div>
+                    </div>
+                    
+                    <div class="stat-card warning">
+                        <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="stat-value" id="fixedExpenses">R$ 0,00</div>
+                        <div class="stat-label">Despesas Fixas</div>
+                    </div>
+                    
+                    <div class="stat-card info">
+                        <div class="stat-icon"><i class="fas fa-random"></i></div>
+                        <div class="stat-value" id="variableExpenses">R$ 0,00</div>
+                        <div class="stat-label">Despesas Variáveis</div>
+                    </div>
+                    
+                    <div class="stat-card primary">
+                        <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">Total de Registros</div>
+                    </div>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="filters-bar" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+                    <button class="filter-btn active" data-period="today">Hoje</button>
+                    <button class="filter-btn" data-period="7days">7 Dias</button>
+                    <button class="filter-btn" data-period="30days">30 Dias</button>
+                    <button class="filter-btn" data-period="month">Este Mês</button>
+                    <button class="filter-btn" data-period="all">Todos</button>
+                    
+                    <select id="filterType" style="margin-left: auto; padding: 8px 16px; border: 2px solid #e2e8f0; border-radius: 8px; height: 40px; background: white; font-family: inherit;">
+                        <option value="all">Todos os Tipos</option>
+                        <option value="fixed">Despesas Fixas</option>
+                        <option value="variable">Despesas Variáveis</option>
+                    </select>
+                    <select id="filterCategory" style="padding: 8px 16px; border: 2px solid #e2e8f0; border-radius: 8px; height: 40px; background: white; font-family: inherit;">
+                        <option value="all">Todas Categorias</option>
+                    </select>
+                </div>
+                
+                <!-- Tabela de Despesas -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Registro de Despesas</h2>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="searchExpense" placeholder="Buscar por descrição...">
+                            </div>
+                            <button class="btn-primary" onclick="showExpenseModal()">
+                                <i class="fas fa-plus"></i> Nova Despesa
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Tipo</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expensesTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <i class="fas fa-spinner fa-spin"></i> Carregando...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Modal de Despesa -->
+                <div id="expenseModal" class="modal">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h3 id="expenseModalTitle">
+                                <i class="fas fa-money-bill-wave"></i> Nova Despesa
+                            </h3>
+                            <button class="modal-close" onclick="closeExpenseModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <form id="expenseForm">
+                            <input type="hidden" id="expenseId">
+                            
+                            <!-- Tipo de Despesa -->
+                            <div class="form-group">
+                                <label><i class="fas fa-tag"></i> Tipo de Despesa *</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <label style="flex: 1; cursor: pointer; display: flex; align-items: center;">
+                                        <input type="radio" name="expenseType" value="fixed" checked onchange="updateCategorySelect()">
+                                        <span style="margin-left: 5px;">
+                                            <i class="fas fa-calendar-check"></i> Despesa Fixa
+                                        </span>
+                                    </label>
+                                    <label style="flex: 1; cursor: pointer; display: flex; align-items: center;">
+                                        <input type="radio" name="expenseType" value="variable" onchange="updateCategorySelect()">
+                                        <span style="margin-left: 5px;">
+                                            <i class="fas fa-random"></i> Despesa Variável
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Categoria -->
+                            <div class="form-group">
+                                <label><i class="fas fa-folder"></i> Categoria *</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="expenseCategory" required style="flex: 1; height: 48px;" onchange="onCategoryChange()">
+                                        <option value="">Selecione uma categoria...</option>
+                                    </select>
+                                    <button type="button" class="btn-secondary" onclick="showCustomCategoryInput()" title="Categoria personalizada">
+                                        <i class="fas fa-plus-circle"></i>
+                                    </button>
+                                </div>
+                                <!-- Campo para categoria personalizada -->
+                                <div id="customCategoryGroup" style="display: none; margin-top: 10px;">
+                                    <input type="text" id="customCategory" 
+                                           placeholder="Digite o nome da categoria"
+                                           style="width: 100%;"
+                                           maxlength="50">
+                                </div>
+                            </div>
+                            
+                            <!-- Descrição -->
+                            <div class="form-group">
+                                <label><i class="fas fa-file-alt"></i> Descrição *</label>
+                                <input type="text" id="expenseDescription" 
+                                       required 
+                                       placeholder="Descreva a despesa..."
+                                       maxlength="200"
+                                       style="width: 100%;">
+                            </div>
+                            
+                            <!-- Valor e Data -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label><i class="fas fa-dollar-sign"></i> Valor (R$) *</label>
+                                    <input type="text" id="expenseValue" 
+                                           required 
+                                           placeholder="0,00"
+                                           class="money-input"
+                                           oninput="formatMoneyInput(this)"
+                                           style="width: 100%;">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-calendar"></i> Data *</label>
+                                    <input type="date" id="expenseDate" required style="width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <!-- Observação -->
+                            <div class="form-group">
+                                <label><i class="fas fa-sticky-note"></i> Observação</label>
+                                <textarea id="expenseObservation" 
+                                          rows="3" 
+                                          placeholder="Observações adicionais (opcional)"
+                                          maxlength="500"
+                                          style="width: 100%;"></textarea>
+                            </div>
+                            
+                            <div class="form-actions" style="margin-top: 20px;">
+                                <button type="button" class="btn-secondary" onclick="closeExpenseModal()">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save"></i> Salvar Despesa
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Modal de Visualização -->
+                <div id="viewExpenseModal" class="modal">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h3>Detalhes da Despesa</h3>
+                            <button class="modal-close" onclick="closeModal('viewExpenseModal')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="expenseDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/auth_check.js"></script>
+    <script src="./js/despesas.js"></script>
+</body>
+</html>

@@ -1,97 +1,12 @@
-// js/clients.js - Módulo de Clientes (VERSÃO CORRIGIDA)
+// js/clientes.js - Módulo de Clientes
 console.log('📦 Carregando módulo de clientes...');
 
 // ============================================
 // FUNÇÃO PRINCIPAL - Carrega a página
 // ============================================
 async function loadClients() {
-    const contentArea = document.getElementById('contentArea');
+    console.log('👥 loadClients() chamada!');
     document.getElementById('pageTitle').textContent = 'Clientes';
-    
-    contentArea.innerHTML = `
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Gerenciamento de Clientes</h2>
-                <div class="table-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchClient" placeholder="Buscar por nome ou documento...">
-                    </div>
-                    <button class="btn-primary" onclick="showClientModal()">
-                        <i class="fas fa-plus"></i> Novo Cliente
-                    </button>
-                </div>
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>E-mail</th>
-                        <th>Celular</th>
-                        <th>CPF/CNPJ</th>
-                        <th>Data Cadastro</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="clientsTableBody">
-                    <tr>
-                        <td colspan="6" style="text-align: center;">Carregando...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Modal de Cliente -->
-        <div id="clientModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="clientModalTitle">Novo Cliente</h3>
-                    <button class="modal-close" onclick="closeModal('clientModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form id="clientForm">
-                    <input type="hidden" id="clientId">
-                    
-                    <div class="form-group">
-                        <label>Nome Completo *</label>
-                        <input type="text" id="clientName" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>E-mail</label>
-                        <input type="email" id="clientEmail">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Celular *</label>
-                        <input type="tel" id="clientPhone" placeholder="(00) 00000-0000">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Data de Nascimento</label>
-                        <input type="date" id="clientBirthdate">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>CPF/CNPJ</label>
-                        <input type="text" id="clientDocument" placeholder="000.000.000-00 ou 00.000.000/0000-00">
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="closeModal('clientModal')">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-save"></i> Salvar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
     
     // Carregar lista
     await refreshClientsList();
@@ -108,6 +23,7 @@ async function loadClients() {
 // ============================================
 async function refreshClientsList(searchTerm = '') {
     const tbody = document.getElementById('clientsTableBody');
+    if (!tbody) return;
     
     try {
         let query = supabaseClient
@@ -179,6 +95,7 @@ async function searchClients() {
 function showClientModal(clientId = null) {
     const modal = document.getElementById('clientModal');
     const title = document.getElementById('clientModalTitle');
+    if (!modal) return;
     
     // Limpar formulário
     document.getElementById('clientForm').reset();
@@ -412,11 +329,19 @@ function debounce(func, wait) {
 }
 
 // ============================================
-// EXPORTAR FUNÇÕES GLOBAIS
+// EXPORTAR FUNÇÕES GLOBAIS E INICIALIZAÇÃO
 // ============================================
 window.showClientModal = showClientModal;
 window.editClient = editClient;
 window.deleteClient = deleteClient;
 window.closeModal = closeModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('clientsTableBody')) {
+        setTimeout(() => {
+            loadClients();
+        }, 300);
+    }
+});
 
 console.log('✅ Módulo de Clientes carregado com sucesso!');

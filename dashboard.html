@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinicalle - Dashboard</title>
+    <!-- Otimização de Carregamento (Preconnect) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CSS Customizado -->
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <script>
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+    </script>
+    <div id="appScreen" class="app-container" style="display: flex;">
+        <!-- Menu Lateral -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-magic"></i>
+                    <span>Clinicalle</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="clientes.html" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                </a>
+                <a href="produtos.html" class="nav-item">
+                    <i class="fas fa-box"></i>
+                    <span>Produtos</span>
+                </a>
+                <a href="vendas.html" class="nav-item">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Vendas</span>
+                </a>
+                <a href="despesas.html" class="nav-item">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Despesas</span>
+                </a>
+                <a href="usuarios.html" class="nav-item admin-only">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Usuários</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Barra Superior -->
+            <header class="top-bar">
+                <button class="menu-toggle" id="menuToggleBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-info">
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                    <span class="current-date" id="currentDate">Carregando data...</span>
+                </div>
+                <div class="user-menu">
+                    <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <span class="user-name" id="userName">Carregando...</span>
+                            <span class="user-role">Profissional</span>
+                        </div>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn" title="Sair do sistema">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Área de Conteúdo Específico -->
+            <div class="content-area" id="contentArea">
+                <div class="dashboard-container">
+                    <!-- Cards de Estatísticas Principais -->
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="stat-value" id="totalRevenue">R$ 0,00</div>
+                            <div class="stat-label">Faturamento Bruto</div>
+                            <div class="stat-change" id="revenueChange"></div>
+                        </div>
+                        
+                        <div class="stat-card danger">
+                            <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+                            <div class="stat-value" id="totalExpenses">R$ 0,00</div>
+                            <div class="stat-label">Total de Despesas</div>
+                            <div class="stat-change" id="expensesChange"></div>
+                        </div>
+                        
+                        <div class="stat-card success">
+                            <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
+                            <div class="stat-value" id="netProfit">R$ 0,00</div>
+                            <div class="stat-label">Lucro Líquido</div>
+                            <div class="stat-change" id="profitChange"></div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                            <div class="stat-value" id="dashMeta">R$ 0,00</div>
+                            <div class="stat-label">Meta do Mês</div>
+                            <div id="dashMetaProgress" style="margin-top: 8px;"></div>
+                        </div>
+                        
+                        <div class="stat-card info">
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="stat-value" id="totalClients">0</div>
+                            <div class="stat-label">Clientes Ativos</div>
+                            <div class="stat-change" id="clientsChange"></div>
+                        </div>
+                        
+                        <div class="stat-card purple">
+                            <div class="stat-icon"><i class="fas fa-box"></i></div>
+                            <div class="stat-value" id="totalProducts">0</div>
+                            <div class="stat-label">Produtos em Estoque</div>
+                            <div class="stat-change" id="productsChange"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtros de Período -->
+                    <div class="filters-bar">
+                        <button class="filter-btn active" data-period="today">
+                            <i class="fas fa-calendar-day"></i> Hoje
+                        </button>
+                        <button class="filter-btn" data-period="7days">
+                            <i class="fas fa-calendar-week"></i> Últimos 7 dias
+                        </button>
+                        <button class="filter-btn" data-period="30days">
+                            <i class="fas fa-calendar-alt"></i> Últimos 30 dias
+                        </button>
+                        <button class="filter-btn" data-period="month">
+                            <i class="fas fa-calendar-month"></i> Mês Atual
+                        </button>
+                        <button class="filter-btn" data-period="year">
+                            <i class="fas fa-calendar-year"></i> Ano Atual
+                        </button>
+                        <button class="filter-btn" data-period="custom">
+                            <i class="fas fa-calendar-alt"></i> Personalizado
+                        </button>
+                    </div>
+                    
+                    <!-- Filtro de Data Personalizado -->
+                    <div id="customDateFilter" style="display: none; gap: 15px; margin-bottom: 30px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap; align-items: flex-end;">
+                        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                            <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #4a5568;">Data Início</label>
+                            <input type="date" id="customStartDate" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0; font-size: 14px; height: 44px;">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                            <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #4a5568;">Data Fim</label>
+                            <input type="date" id="customEndDate" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0; font-size: 14px; height: 44px;">
+                        </div>
+                        <div>
+                            <button class="btn-primary" onclick="aplicarFiltroPersonalizadoDash()" style="padding: 10px 24px; font-size: 15px; border-radius: 8px; border: none; cursor: pointer; background: var(--tropical-teal); color: white; height: 44px; display: flex; align-items: center; justify-content: center; font-weight: 600; gap: 8px; transition: all 0.3s ease;">
+                                <i class="fas fa-search"></i> Aplicar Filtro
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Gráficos -->
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-line"></i> Receitas por Mês</h3>
+                                <button class="chart-action" onclick="exportChart('revenue')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-line"></i> Despesas por Mês</h3>
+                                <button class="chart-action" onclick="exportChart('expenses')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <canvas id="expensesChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-line"></i> Lucro por Mês</h3>
+                                <button class="chart-action" onclick="exportChart('profit')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <canvas id="profitChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-bar"></i> Comparativo Receita x Despesa</h3>
+                                <button class="chart-action" onclick="exportChart('comparison')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Cards de Indicadores Adicionais -->
+                    <div class="indicators-grid">
+                        <div class="indicator-card">
+                            <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
+                            <div class="indicator-info">
+                                <div class="indicator-label">Margem de Lucro</div>
+                                <div class="indicator-value" id="profitMargin">0%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="indicator-card">
+                            <div class="indicator-icon"><i class="fas fa-percent"></i></div>
+                            <div class="indicator-info">
+                                <div class="indicator-label">Percentual de Despesas</div>
+                                <div class="indicator-value" id="expensePercentage">0%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="indicator-card">
+                            <div class="indicator-icon"><i class="fas fa-ticket-alt"></i></div>
+                            <div class="indicator-info">
+                                <div class="indicator-label">Ticket Médio</div>
+                                <div class="indicator-value" id="averageTicket">R$ 0,00</div>
+                            </div>
+                        </div>
+                        
+                        <div class="indicator-card">
+                            <div class="indicator-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                            <div class="indicator-info">
+                                <div class="indicator-label">Lucro por Cliente</div>
+                                <div class="indicator-value" id="profitPerClient">R$ 0,00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Últimas Vendas -->
+                    <div class="recent-activities">
+                        <div class="section-header">
+                            <h3><i class="fas fa-clock"></i> Últimas Vendas</h3>
+                            <a href="vendas.html" class="view-all">
+                                Ver todas <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="activities-list" id="recentSales">
+                            <div class="loading-spinner-small">
+                                <i class="fas fa-spinner fa-pulse"></i> Carregando...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/auth_check.js"></script>
+    <script src="./js/dashboard.js"></script>
+</body>
+</html>

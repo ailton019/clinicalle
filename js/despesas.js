@@ -1,54 +1,13 @@
-// js/expenses.js - Módulo de Despesas
+// js/despesas.js - Módulo de Despesas
 // Gerencia despesas fixas e variáveis com categorias personalizadas
-// Função de salvar despesa
-async function handleExpenseSubmit(e) {
-    e.preventDefault();
-    
-    const typeRadio = document.querySelector('input[name="expenseType"]:checked');
-    let category = document.getElementById('expenseCategory')?.value;
-    const customCategory = document.getElementById('customCategory')?.value?.trim();
-    
-    if (category === 'outros' && customCategory) {
-        category = customCategory;
-    }
-    
-    const expenseData = {
-        type: typeRadio?.value || 'variable',
-        category: category,
-        description: document.getElementById('expenseDescription')?.value?.trim(),
-        value: parseFloat((document.getElementById('expenseValue')?.value || '0').replace(',', '.')),
-        date: document.getElementById('expenseDate')?.value,
-        observation: document.getElementById('expenseObservation')?.value?.trim() || null,
-        created_at: new Date().toISOString()
-    };
-    
-    if (!expenseData.description) { alert('Descrição é obrigatória!'); return; }
-    if (!expenseData.value) { alert('Valor é obrigatório!'); return; }
-    
-    console.log('📤 Enviando despesa:', expenseData);
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('expenses')
-            .insert(expenseData)
-            .select();
-        
-        console.log('✅ Resultado:', data, error);
-        
-        if (error) throw error;
-        
-        alert('✅ Despesa registrada!');
-        closeExpenseModal();
-        await refreshExpensesList();
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        alert('Erro ao salvar: ' + error.message);
-    }
-}
+console.log('📦 Carregando módulo de despesas...');
+
 // Variáveis globais do módulo
 let expensesList = [];
 let editingExpenseId = null;
+let currentTypeFilter = 'all';
+let currentCategoryFilter = 'all';
+let currentPeriodFilter = 'today';
 
 // Categorias padrão
 const DEFAULT_CATEGORIES = {
@@ -82,209 +41,14 @@ const DEFAULT_CATEGORIES = {
  * Carrega a página de despesas
  */
 async function loadExpenses() {
-    const contentArea = document.getElementById('contentArea');
+    console.log('💸 loadExpenses() chamada!');
     document.getElementById('pageTitle').textContent = 'Despesas';
     
-    contentArea.innerHTML = `
-        <!-- Cards de Resumo -->
-        <div class="stats-grid" style="margin-bottom: 30px;">
-            <div class="stat-card danger">
-                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-                <div class="stat-value" id="totalExpenses">R$ 0,00</div>
-                <div class="stat-label">Total de Despesas</div>
-            </div>
-            
-            <div class="stat-card warning">
-                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                <div class="stat-value" id="fixedExpenses">R$ 0,00</div>
-                <div class="stat-label">Despesas Fixas</div>
-            </div>
-            
-            <div class="stat-card info">
-                <div class="stat-icon"><i class="fas fa-random"></i></div>
-                <div class="stat-value" id="variableExpenses">R$ 0,00</div>
-                <div class="stat-label">Despesas Variáveis</div>
-            </div>
-            
-            <div class="stat-card primary">
-                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
-                <div class="stat-value" id="totalCount">0</div>
-                <div class="stat-label">Total de Registros</div>
-            </div>
-        </div>
-        
-        <!-- Filtros -->
-        <div class="filters-bar">
-            <button class="filter-btn active" data-period="today">Hoje</button>
-            <button class="filter-btn" data-period="7days">7 Dias</button>
-            <button class="filter-btn" data-period="30days">30 Dias</button>
-            <button class="filter-btn" data-period="month">Este Mês</button>
-            <button class="filter-btn" data-period="all">Todos</button>
-            <select id="filterType" style="margin-left: auto; padding: 8px 16px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                <option value="all">Todos os Tipos</option>
-                <option value="fixed">Despesas Fixas</option>
-                <option value="variable">Despesas Variáveis</option>
-            </select>
-            <select id="filterCategory" style="padding: 8px 16px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                <option value="all">Todas Categorias</option>
-            </select>
-        </div>
-        
-        <!-- Tabela de Despesas -->
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Registro de Despesas</h2>
-                <div class="table-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchExpense" placeholder="Buscar por descrição...">
-                    </div>
-                    <button class="btn-primary" onclick="showExpenseModal()">
-                        <i class="fas fa-plus"></i> Nova Despesa
-                    </button>
-                </div>
-            </div>
-            
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Descrição</th>
-                            <th>Categoria</th>
-                            <th>Tipo</th>
-                            <th>Valor</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="expensesTableBody">
-                        <tr>
-                            <td colspan="6" class="text-center">
-                                <i class="fas fa-spinner fa-spin"></i> Carregando...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Modal de Despesa -->
-        <div id="expenseModal" class="modal">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3 id="expenseModalTitle">
-                        <i class="fas fa-money-bill-wave"></i> Nova Despesa
-                    </h3>
-                    <button class="modal-close" onclick="closeExpenseModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form id="expenseForm">
-                    <input type="hidden" id="expenseId">
-                    
-                    <!-- Tipo de Despesa -->
-                    <div class="form-group">
-                        <label><i class="fas fa-tag"></i> Tipo de Despesa *</label>
-                        <div style="display: flex; gap: 10px;">
-                            <label style="flex: 1; cursor: pointer;">
-                                <input type="radio" name="expenseType" value="fixed" checked onchange="updateCategorySelect()">
-                                <span style="margin-left: 5px;">
-                                    <i class="fas fa-calendar-check"></i> Despesa Fixa
-                                </span>
-                            </label>
-                            <label style="flex: 1; cursor: pointer;">
-                                <input type="radio" name="expenseType" value="variable" onchange="updateCategorySelect()">
-                                <span style="margin-left: 5px;">
-                                    <i class="fas fa-random"></i> Despesa Variável
-                                </span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- Categoria -->
-                    <div class="form-group">
-                        <label><i class="fas fa-folder"></i> Categoria *</label>
-                        <div style="display: flex; gap: 10px;">
-                            <select id="expenseCategory" required style="flex: 1;" onchange="onCategoryChange()">
-                                <option value="">Selecione uma categoria...</option>
-                            </select>
-                            <button type="button" class="btn-secondary" onclick="showCustomCategoryInput()" title="Categoria personalizada">
-                                <i class="fas fa-plus-circle"></i>
-                            </button>
-                        </div>
-                        <!-- Campo para categoria personalizada -->
-                        <div id="customCategoryGroup" style="display: none; margin-top: 10px;">
-                            <input type="text" id="customCategory" 
-                                   placeholder="Digite o nome da categoria"
-                                   style="width: 100%;"
-                                   maxlength="50">
-                        </div>
-                    </div>
-                    
-                    <!-- Descrição -->
-                    <div class="form-group">
-                        <label><i class="fas fa-file-alt"></i> Descrição *</label>
-                        <input type="text" id="expenseDescription" 
-                               required 
-                               placeholder="Descreva a despesa..."
-                               maxlength="200">
-                    </div>
-                    
-                    <!-- Valor e Data -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div class="form-group">
-                            <label><i class="fas fa-dollar-sign"></i> Valor (R$) *</label>
-                            <input type="text" id="expenseValue" 
-                                   required 
-                                   placeholder="0,00"
-                                   class="money-input"
-                                   oninput="formatMoneyInput(this)">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label><i class="fas fa-calendar"></i> Data *</label>
-                            <input type="date" id="expenseDate" required>
-                        </div>
-                    </div>
-                    
-                    <!-- Observação -->
-                    <div class="form-group">
-                        <label><i class="fas fa-sticky-note"></i> Observação</label>
-                        <textarea id="expenseObservation" 
-                                  rows="3" 
-                                  placeholder="Observações adicionais (opcional)"
-                                  maxlength="500"></textarea>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="closeExpenseModal()">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-save"></i> Salvar Despesa
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Modal de Visualização -->
-        <div id="viewExpenseModal" class="modal">
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header">
-                    <h3>Detalhes da Despesa</h3>
-                    <button class="modal-close" onclick="closeModal('viewExpenseModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div id="expenseDetails"></div>
-            </div>
-        </div>
-    `;
-    
     // Configurar data atual
-    document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('expenseDate');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
     
     // Inicializar selects de categoria
     updateCategorySelect();
@@ -294,15 +58,31 @@ async function loadExpenses() {
     await refreshExpensesList();
     
     // Event Listeners
-    document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
-    document.getElementById('searchExpense').addEventListener('input', debounce(searchExpenses, 300));
-    document.getElementById('filterType').addEventListener('change', () => refreshExpensesList());
-    document.getElementById('filterCategory').addEventListener('change', () => refreshExpensesList());
+    const expenseForm = document.getElementById('expenseForm');
+    if (expenseForm) {
+        expenseForm.removeEventListener('submit', handleExpenseSubmit);
+        expenseForm.addEventListener('submit', handleExpenseSubmit);
+    }
+    
+    const searchExpense = document.getElementById('searchExpense');
+    if (searchExpense) {
+        searchExpense.addEventListener('input', debounce(searchExpenses, 300));
+    }
+    
+    const filterType = document.getElementById('filterType');
+    if (filterType) {
+        filterType.addEventListener('change', () => refreshExpensesList());
+    }
+    
+    const filterCategory = document.getElementById('filterCategory');
+    if (filterCategory) {
+        filterCategory.addEventListener('change', () => refreshExpensesList());
+    }
     
     // Filtros de período
-    document.querySelectorAll('.filter-btn').forEach(btn => {
+    document.querySelectorAll('.filters-bar .filter-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.filters-bar .filter-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             await refreshExpensesList();
         });
@@ -316,7 +96,10 @@ async function loadExpenses() {
  * Adiciona estilos específicos para despesas
  */
 function addExpenseStyles() {
+    if (document.getElementById('expenseStyles')) return;
+    
     const style = document.createElement('style');
+    style.id = 'expenseStyles';
     style.textContent = `
         .expense-type-badge {
             display: inline-block;
@@ -382,6 +165,7 @@ function updateCategorySelect() {
     const type = typeRadio ? typeRadio.value : 'fixed';
     const select = document.getElementById('expenseCategory');
     const customGroup = document.getElementById('customCategoryGroup');
+    if (!select || !customGroup) return;
     
     const categories = type === 'fixed' ? DEFAULT_CATEGORIES.fixed : DEFAULT_CATEGORIES.variable;
     
@@ -390,9 +174,10 @@ function updateCategorySelect() {
             `<option value="${cat.id}">${cat.name}</option>`
         ).join('');
     
-    // Esconder campo customizado se não estiver selecionado "outros"
+    // Esconder campo customizado por padrão
     customGroup.style.display = 'none';
-    document.getElementById('customCategory').value = '';
+    const customInput = document.getElementById('customCategory');
+    if (customInput) customInput.value = '';
 }
 
 /**
@@ -400,6 +185,7 @@ function updateCategorySelect() {
  */
 function updateFilterCategories() {
     const filterSelect = document.getElementById('filterCategory');
+    if (!filterSelect) return;
     
     const allCategories = [
         ...DEFAULT_CATEGORIES.fixed.map(c => ({ ...c, type: 'fixed' })),
@@ -418,10 +204,11 @@ function updateFilterCategories() {
 function onCategoryChange() {
     const select = document.getElementById('expenseCategory');
     const customGroup = document.getElementById('customCategoryGroup');
+    if (!select || !customGroup) return;
     
     if (select.value === 'outros') {
         customGroup.style.display = 'block';
-        document.getElementById('customCategory').focus();
+        document.getElementById('customCategory')?.focus();
     } else {
         customGroup.style.display = 'none';
     }
@@ -433,10 +220,11 @@ function onCategoryChange() {
 function showCustomCategoryInput() {
     const customGroup = document.getElementById('customCategoryGroup');
     const select = document.getElementById('expenseCategory');
+    if (!customGroup || !select) return;
     
     customGroup.style.display = 'block';
     select.value = 'outros';
-    document.getElementById('customCategory').focus();
+    document.getElementById('customCategory')?.focus();
 }
 
 /**
@@ -446,6 +234,7 @@ function showExpenseModal(expenseId = null) {
     const modal = document.getElementById('expenseModal');
     const title = document.getElementById('expenseModalTitle');
     const form = document.getElementById('expenseForm');
+    if (!modal || !form) return;
     
     form.reset();
     document.getElementById('expenseId').value = '';
@@ -494,13 +283,11 @@ async function loadExpenseData(expenseId) {
             setTimeout(() => {
                 const categorySelect = document.getElementById('expenseCategory');
                 if (categorySelect) {
-                    // Verificar se a categoria existe na lista
                     const optionExists = Array.from(categorySelect.options).some(opt => opt.value === expense.category);
                     
                     if (optionExists) {
                         categorySelect.value = expense.category;
                     } else {
-                        // Categoria personalizada
                         categorySelect.value = 'outros';
                         document.getElementById('customCategoryGroup').style.display = 'block';
                         document.getElementById('customCategory').value = expense.category;
@@ -528,7 +315,6 @@ async function handleExpenseSubmit(e) {
     let category = document.getElementById('expenseCategory').value;
     const customCategory = document.getElementById('customCategory').value.trim();
     
-    // Se selecionou "outros", usar a categoria personalizada
     if (category === 'outros' && customCategory) {
         category = customCategory;
     }
@@ -537,12 +323,6 @@ async function handleExpenseSubmit(e) {
     const value = parseMoneyValue(document.getElementById('expenseValue').value);
     const date = document.getElementById('expenseDate').value;
     const observation = document.getElementById('expenseObservation').value.trim();
-    
-    // Validações
-    if (!type) {
-        alert('Selecione o tipo de despesa');
-        return;
-    }
     
     if (!category) {
         alert('Selecione ou digite uma categoria');
@@ -575,11 +355,12 @@ async function handleExpenseSubmit(e) {
     
     try {
         const submitBtn = document.querySelector('#expenseForm button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        }
         
         if (expenseId) {
-            // Atualizar despesa existente
             const { error } = await supabaseClient
                 .from('expenses')
                 .update({
@@ -589,10 +370,8 @@ async function handleExpenseSubmit(e) {
                 .eq('id', expenseId);
             
             if (error) throw error;
-            
             showToast('Despesa atualizada com sucesso!', 'success');
         } else {
-            // Nova despesa
             const { error } = await supabaseClient
                 .from('expenses')
                 .insert({
@@ -601,7 +380,6 @@ async function handleExpenseSubmit(e) {
                 });
             
             if (error) throw error;
-            
             showToast('Despesa registrada com sucesso!', 'success');
         }
         
@@ -625,9 +403,9 @@ async function handleExpenseSubmit(e) {
  */
 async function refreshExpensesList(searchTerm = '') {
     const tbody = document.getElementById('expensesTableBody');
+    if (!tbody) return;
     
     try {
-        // Obter filtros ativos
         const activePeriod = document.querySelector('.filter-btn.active')?.dataset?.period || 'today';
         const filterType = document.getElementById('filterType')?.value || 'all';
         const filterCategory = document.getElementById('filterCategory')?.value || 'all';
@@ -638,7 +416,6 @@ async function refreshExpensesList(searchTerm = '') {
             .order('date', { ascending: false })
             .order('created_at', { ascending: false });
         
-        // Filtro de período
         if (activePeriod !== 'all') {
             const { startDate, endDate } = getDateRange(activePeriod);
             query = query
@@ -646,28 +423,22 @@ async function refreshExpensesList(searchTerm = '') {
                 .lte('date', endDate.split('T')[0]);
         }
         
-        // Filtro de tipo
         if (filterType !== 'all') {
             query = query.eq('type', filterType);
         }
         
-        // Filtro de categoria
         if (filterCategory !== 'all') {
             query = query.eq('category', filterCategory);
         }
         
-        // Busca por texto
         if (searchTerm) {
             query = query.or(`description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`);
         }
         
         const { data, error } = await query;
-        
         if (error) throw error;
         
         expensesList = data || [];
-        
-        // Atualizar cards de resumo
         updateExpensesSummary(expensesList);
         
         if (expensesList.length === 0) {
@@ -676,9 +447,6 @@ async function refreshExpensesList(searchTerm = '') {
                     <td colspan="6" class="text-center" style="padding: 40px;">
                         <i class="fas fa-receipt" style="font-size: 48px; color: #cbd5e0; display: block; margin-bottom: 15px;"></i>
                         <p style="color: #718096; font-size: 16px;">Nenhuma despesa encontrada</p>
-                        <button class="btn-primary" onclick="showExpenseModal()" style="margin-top: 15px;">
-                            <i class="fas fa-plus"></i> Registrar Despesa
-                        </button>
                     </td>
                 </tr>
             `;
@@ -691,7 +459,6 @@ async function refreshExpensesList(searchTerm = '') {
             if (value > 500) valueClass = 'expense-value-high';
             else if (value > 100) valueClass = 'expense-value-medium';
             
-            // Buscar ícone da categoria
             const categoryInfo = findCategoryInfo(expense.category, expense.type);
             
             return `
@@ -748,14 +515,9 @@ async function refreshExpensesList(searchTerm = '') {
         console.error('Erro ao carregar despesas:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center" style="padding: 40px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #e53e3e; display: block; margin-bottom: 15px;"></i>
-                    <p style="color: #e53e3e;">Erro ao carregar despesas</p>
-                    <small style="color: #718096;">${error.message}</small>
-                    <br>
-                    <button class="btn-primary" onclick="refreshExpensesList()" style="margin-top: 15px;">
-                        <i class="fas fa-sync"></i> Tentar Novamente
-                    </button>
+                <td colspan="6" class="text-center" style="padding: 40px; color: #e53e3e;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 15px;"></i>
+                    <p>Erro ao carregar despesas: ${error.message}</p>
                 </td>
             </tr>
         `;
@@ -775,10 +537,15 @@ function updateExpensesSummary(expenses) {
         .reduce((sum, exp) => sum + (parseFloat(exp.value) || 0), 0);
     const totalCount = expenses.length;
     
-    document.getElementById('totalExpenses').textContent = formatCurrency(totalExpenses);
-    document.getElementById('fixedExpenses').textContent = formatCurrency(fixedExpenses);
-    document.getElementById('variableExpenses').textContent = formatCurrency(variableExpenses);
-    document.getElementById('totalCount').textContent = totalCount;
+    const totalExpensesEl = document.getElementById('totalExpenses');
+    const fixedExpensesEl = document.getElementById('fixedExpenses');
+    const variableExpensesEl = document.getElementById('variableExpenses');
+    const totalCountEl = document.getElementById('totalCount');
+    
+    if (totalExpensesEl) totalExpensesEl.textContent = formatCurrency(totalExpenses);
+    if (fixedExpensesEl) fixedExpensesEl.textContent = formatCurrency(fixedExpenses);
+    if (variableExpensesEl) variableExpensesEl.textContent = formatCurrency(variableExpenses);
+    if (totalCountEl) totalCountEl.textContent = totalCount;
 }
 
 /**
@@ -790,7 +557,6 @@ function findCategoryInfo(categoryId, type) {
     
     if (found) return found;
     
-    // Categoria personalizada
     return {
         name: categoryId || 'Sem categoria',
         icon: type === 'fixed' ? 'fa-tag' : 'fa-tags'
@@ -818,8 +584,9 @@ async function viewExpense(expenseId) {
         if (error) throw error;
         
         const categoryInfo = findCategoryInfo(expense.category, expense.type);
-        
         const detailsDiv = document.getElementById('expenseDetails');
+        if (!detailsDiv) return;
+        
         detailsDiv.innerHTML = `
             <div style="padding: 20px;">
                 <div style="text-align: center; margin-bottom: 25px;">
@@ -835,14 +602,14 @@ async function viewExpense(expenseId) {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                     <div style="text-align: center; padding: 20px; background: #f7fafc; border-radius: 8px;">
                         <small style="color: #718096;">Categoria</small>
-                        <div style="font-size: 18px; font-weight: 600; color: #2d3748; margin-top: 5px;">
+                        <div style="font-size: 16px; font-weight: 600; color: #2d3748; margin-top: 5px;">
                             ${categoryInfo.name}
                         </div>
                     </div>
                     
                     <div style="text-align: center; padding: 20px; background: #f7fafc; border-radius: 8px;">
                         <small style="color: #718096;">Valor</small>
-                        <div style="font-size: 24px; font-weight: 700; color: #e53e3e; margin-top: 5px;">
+                        <div style="font-size: 20px; font-weight: 700; color: #e53e3e; margin-top: 5px;">
                             ${formatCurrency(expense.value)}
                         </div>
                     </div>
@@ -850,17 +617,17 @@ async function viewExpense(expenseId) {
                 
                 <div style="text-align: center; padding: 15px; background: #f7fafc; border-radius: 8px; margin-bottom: 15px;">
                     <small style="color: #718096;">Data</small>
-                    <div style="font-size: 18px; font-weight: 600;">
-                        <i class="far fa-calendar-alt"></i> ${formatDate(expense.date)}
+                    <div style="font-size: 16px; font-weight: 600;">
+                        <i class="far fa-calendar-alt"></i> ${formatDateShort(expense.date)}
                     </div>
                 </div>
                 
                 ${expense.observation ? `
                     <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="margin-bottom: 10px; color: #744210;">
+                        <h4 style="margin-bottom: 10px; color: #744210; text-align: left;">
                             <i class="fas fa-sticky-note"></i> Observações
                         </h4>
-                        <p style="color: #2d3748;">${expense.observation}</p>
+                        <p style="color: #2d3748; text-align: left;">${expense.observation}</p>
                     </div>
                 ` : ''}
                 
@@ -869,7 +636,7 @@ async function viewExpense(expenseId) {
                     ${expense.updated_at ? `<p>Atualizado em: ${formatDate(expense.updated_at)}</p>` : ''}
                 </div>
                 
-                <div class="form-actions" style="margin-top: 20px;">
+                <div class="form-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
                     <button class="btn-secondary" onclick="closeModal('viewExpenseModal')">
                         <i class="fas fa-times"></i> Fechar
                     </button>
@@ -880,7 +647,7 @@ async function viewExpense(expenseId) {
             </div>
         `;
         
-        document.getElementById('viewExpenseModal').classList.add('show');
+        document.getElementById('viewExpenseModal')?.classList.add('show');
         
     } catch (error) {
         console.error('Erro ao carregar detalhes:', error);
@@ -893,7 +660,6 @@ async function viewExpense(expenseId) {
  */
 async function deleteExpense(expenseId) {
     const expense = expensesList.find(e => e.id === expenseId);
-    
     if (!expense) {
         alert('Despesa não encontrada');
         return;
@@ -941,8 +707,16 @@ async function searchExpenses() {
  * Fecha o modal de despesa
  */
 function closeExpenseModal() {
-    document.getElementById('expenseModal').classList.remove('show');
-    document.getElementById('expenseForm').reset();
+    const modal = document.getElementById('expenseModal');
+    if (modal) modal.classList.remove('show');
+    document.getElementById('expenseForm')?.reset();
+}
+
+/**
+ * Fecha qualquer modal por ID
+ */
+function closeModal(modalId) {
+    document.getElementById(modalId)?.classList.remove('show');
 }
 
 /**
@@ -969,10 +743,6 @@ function getDateRange(period) {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = now;
             break;
-        case 'year':
-            startDate = new Date(now.getFullYear(), 0, 1);
-            endDate = now;
-            break;
         default:
             startDate = new Date(2000, 0, 1);
             endDate = now;
@@ -985,10 +755,6 @@ function getDateRange(period) {
 }
 
 // Funções utilitárias
-
-/**
- * Formata valor monetário
- */
 function formatCurrency(value) {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -996,9 +762,6 @@ function formatCurrency(value) {
     }).format(value || 0);
 }
 
-/**
- * Formata valor para input
- */
 function formatMoneyValue(value) {
     if (!value && value !== 0) return '';
     const num = parseFloat(value);
@@ -1006,9 +769,6 @@ function formatMoneyValue(value) {
     return num.toFixed(2).replace('.', ',');
 }
 
-/**
- * Converte string monetária para número
- */
 function parseMoneyValue(value) {
     if (!value) return 0;
     const cleaned = value.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
@@ -1016,9 +776,6 @@ function parseMoneyValue(value) {
     return isNaN(num) ? 0 : num;
 }
 
-/**
- * Formata input monetário
- */
 function formatMoneyInput(input) {
     let value = input.value.replace(/\D/g, '');
     if (value === '') {
@@ -1029,22 +786,16 @@ function formatMoneyInput(input) {
     input.value = num.toFixed(2).replace('.', ',');
 }
 
-/**
- * Formata data curta
- */
 function formatDateShort(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+    // Para evitar problema de fuso horário, converter YYYY-MM-DD
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return new Date(dateString).toLocaleDateString('pt-BR');
 }
 
-/**
- * Formata data completa
- */
 function formatDate(dateString) {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -1057,9 +808,6 @@ function formatDate(dateString) {
     });
 }
 
-/**
- * Mostra notificação toast
- */
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -1077,6 +825,7 @@ function showToast(message, type = 'info') {
         display: flex;
         align-items: center;
         gap: 10px;
+        font-family: 'Outfit', sans-serif;
     `;
     
     const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
@@ -1085,23 +834,10 @@ function showToast(message, type = 'info') {
     document.body.appendChild(toast);
     
     setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+        toast.remove();
     }, 3000);
 }
 
-/**
- * Fecha modal ao clicar fora
- */
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        e.target.classList.remove('show');
-    }
-});
-
-/**
- * Debounce
- */
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -1114,32 +850,24 @@ function debounce(func, wait) {
     };
 }
 
-/**
- * Máscara de telefone
- */
-function maskPhone(e) {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.substring(0, 11);
-    
-    if (value.length > 2) {
-        value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
-    }
-    if (value.length > 10) {
-        value = `${value.substring(0, 10)}-${value.substring(10)}`;
-    }
-    
-    e.target.value = value;
-}
-
 // Exportar funções globais
 window.showExpenseModal = showExpenseModal;
 window.editExpense = editExpense;
 window.viewExpense = viewExpense;
 window.deleteExpense = deleteExpense;
 window.closeExpenseModal = closeExpenseModal;
+window.closeModal = closeModal;
 window.showCustomCategoryInput = showCustomCategoryInput;
 window.onCategoryChange = onCategoryChange;
 window.updateCategorySelect = updateCategorySelect;
 window.formatMoneyInput = formatMoneyInput;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('expensesTableBody')) {
+        setTimeout(() => {
+            loadExpenses();
+        }, 300);
+    }
+});
 
 console.log('✅ Módulo de Despesas carregado');

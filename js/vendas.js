@@ -1,11 +1,12 @@
-// js/sales.js - Módulo de Vendas com Busca por Digitação, Desconto e Filtro de Data
-console.log('📦 Carregando sales.js...');
+// js/vendas.js - Módulo de Vendas com Busca por Digitação, Desconto e Filtro de Data
+console.log('📦 Carregando vendas.js...');
 
 // ============================================
 // VARIÁVEIS GLOBAIS
 // ============================================
 let todosClientes = [];
 let todosProdutos = [];
+let saleItems = [];
 let currentSearchTerm = '';
 let currentDateFilter = 'today';
 let customStartDate = null;
@@ -17,287 +18,13 @@ let customEndDate = null;
 function loadSales() {
     console.log('🛒 loadSales() chamada!');
     
-    const contentArea = document.getElementById('contentArea');
-    if (!contentArea) {
-        console.error('❌ contentArea não encontrado');
-        return;
-    }
-    
     document.getElementById('pageTitle').textContent = 'Vendas';
     
-    contentArea.innerHTML = `
-        <!-- Cards de Resumo -->
-        <div class="stats-grid" style="margin-bottom: 30px;">
-            <div class="stat-card success">
-                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-value" id="totalFaturamento">R$ 0,00</div>
-                <div class="stat-label">Faturamento Total</div>
-            </div>
-            <div class="stat-card primary">
-                <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
-                <div class="stat-value" id="totalVendas">0</div>
-                <div class="stat-label">Total de Vendas</div>
-            </div>
-            <div class="stat-card info">
-                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
-                <div class="stat-value" id="ticketMedio">R$ 0,00</div>
-                <div class="stat-label">Ticket Médio</div>
-            </div>
-            <div class="stat-card warning" onclick="showGoalModal()" style="cursor: pointer;" title="Clique para definir meta mensal">
-                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
-                <div class="stat-value" id="metaMensal">R$ 0,00</div>
-                <div class="stat-label">Meta do Mês</div>
-                <div id="metaProgresso" style="margin-top: 8px; font-size: 12px; color: #718096;">
-                    <span style="color: #3182ce; cursor: pointer;">📌 Clique para definir meta</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Filtros de Período -->
-        <div class="filters-bar">
-            <button class="filter-btn ${currentDateFilter === 'today' ? 'active' : ''}" data-period="today">Hoje</button>
-            <button class="filter-btn ${currentDateFilter === '7days' ? 'active' : ''}" data-period="7days">7 Dias</button>
-            <button class="filter-btn ${currentDateFilter === '30days' ? 'active' : ''}" data-period="30days">30 Dias</button>
-            <button class="filter-btn ${currentDateFilter === 'month' ? 'active' : ''}" data-period="month">Este Mês</button>
-            <button class="filter-btn ${currentDateFilter === 'custom' ? 'active' : ''}" data-period="custom">Personalizado</button>
-            <button class="filter-btn ${currentDateFilter === 'all' ? 'active' : ''}" data-period="all">Todas</button>
-        </div>
-        
-        <!-- Filtro de Data Personalizado -->
-        <div id="customDateFilter" style="display: ${currentDateFilter === 'custom' ? 'flex' : 'none'}; gap: 10px; margin-bottom: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
-            <div class="form-group" style="flex: 1;">
-                <label>Data Início</label>
-                <input type="date" id="customStartDate" value="${customStartDate || ''}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label>Data Fim</label>
-                <input type="date" id="customEndDate" value="${customEndDate || ''}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            </div>
-            <div style="display: flex; align-items: flex-end;">
-                <button class="btn-primary" onclick="aplicarFiltroPersonalizado()" style="padding: 10px 20px;">
-                    <i class="fas fa-search"></i> Aplicar
-                </button>
-            </div>
-        </div>
-        
-        <!-- Tabela de Vendas -->
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Registro de Vendas</h2>
-                <div class="table-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchSale" placeholder="Buscar por cliente ou produto..." 
-                               value="${currentSearchTerm}">
-                    </div>
-                    <button class="btn-primary" onclick="showSaleModal()">
-                        <i class="fas fa-plus"></i> Nova Venda
-                    </button>
-                </div>
-            </div>
-            
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Cliente</th>
-                            <th>Produto</th>
-                            <th>Qtd</th>
-                            <th>Valor Unit.</th>
-                            <th>Desconto</th>
-                            <th>Valor Total</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="salesTableBody">
-                        <tr>
-                            <td colspan="8" style="text-align: center; padding: 40px;">
-                                <i class="fas fa-spinner fa-spin"></i> Carregando...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- MODAL DE VENDA -->
-        <div id="saleModal" class="modal">
-            <div class="modal-content" style="max-width: 650px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-shopping-cart"></i> Nova Venda</h3>
-                    <button class="modal-close" onclick="closeModal('saleModal')">&times;</button>
-                </div>
-                
-                <form id="saleForm" onsubmit="return salvarVenda(event)">
-                    
-                    <!-- DATA DA VENDA - AUTOMÁTICA MAS EDITÁVEL -->
-                    <div class="form-group">
-                        <label><i class="fas fa-calendar"></i> Data da Venda *</label>
-                        <input type="datetime-local" id="saleDate" required 
-                               value="${new Date().toISOString().slice(0, 16)}"
-                               style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px;">
-                        <small style="color: #718096; display: block; margin-top: 5px;">
-                            <i class="fas fa-info-circle"></i> Data atual preenchida automaticamente, mas pode ser alterada
-                        </small>
-                    </div>
-                    
-                    <!-- CAMPO CLIENTE COM BUSCA -->
-                    <div class="form-group">
-                        <label><i class="fas fa-user"></i> Cliente *</label>
-                        <div style="position: relative;">
-                            <input type="text" 
-                                   id="saleClientSearch" 
-                                   placeholder="🔍 Digite para buscar cliente..."
-                                   autocomplete="off"
-                                   style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
-                                   oninput="filtrarClientes()"
-                                   onfocus="mostrarListaClientes()">
-                            <input type="hidden" id="saleClient" required>
-                            <div id="clientesLista" 
-                                 style="display: none; position: absolute; top: 100%; left: 0; right: 0; 
-                                        max-height: 200px; overflow-y: auto; background: white; 
-                                        border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px; 
-                                        z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- CAMPO PRODUTO COM BUSCA -->
-                    <div class="form-group">
-                        <label><i class="fas fa-box"></i> Produto *</label>
-                        <div style="position: relative;">
-                            <input type="text" 
-                                   id="saleProductSearch" 
-                                   placeholder="🔍 Digite para buscar produto..."
-                                   autocomplete="off"
-                                   style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
-                                   oninput="filtrarProdutos()"
-                                   onfocus="mostrarListaProdutos()">
-                            <input type="hidden" id="saleProduct" required>
-                            <div id="produtosLista" 
-                                 style="display: none; position: absolute; top: 100%; left: 0; right: 0; 
-                                        max-height: 200px; overflow-y: auto; background: white; 
-                                        border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px; 
-                                        z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                            </div>
-                        </div>
-                        <div id="productInfo" style="display:none; margin-top:8px; padding:10px; background:#f0fff4; border-radius:6px;">
-                            <span id="infoCode" style="font-weight:600;"></span> - 
-                            <span id="infoPrice" style="color:#38a169; font-weight:600;"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- QUANTIDADE E VALOR UNITÁRIO -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="form-group">
-                            <label><i class="fas fa-hashtag"></i> Quantidade *</label>
-                            <input type="number" id="saleQuantity" required min="1" value="1" 
-                                   onchange="calcularTotal()" oninput="calcularTotal()"
-                                   style="padding: 12px; font-size: 16px;">
-                        </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> Valor Unitário *</label>
-                            <input type="text" id="saleUnitValue" required placeholder="0,00" readonly 
-                                   style="background:#f7fafc; padding: 12px; font-size: 16px; font-weight: 600;">
-                        </div>
-                    </div>
-                    
-                    <!-- CAMPO DE DESCONTO -->
-                    <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #fefcbf;">
-                        <label style="font-weight: 600; color: #744210; margin-bottom: 10px; display: block;">
-                            <i class="fas fa-tags"></i> Desconto
-                        </label>
-                        
-                        <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 500;">
-                                <input type="radio" name="discountType" value="percent" checked onchange="toggleDiscountType()">
-                                <span>Porcentagem (%)</span>
-                            </label>
-                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 500;">
-                                <input type="radio" name="discountType" value="real" onchange="toggleDiscountType()">
-                                <span>Valor em Reais (R$)</span>
-                            </label>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" 
-                                   id="saleDiscount" 
-                                   value="0,00"
-                                   placeholder="0,00"
-                                   style="flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; font-weight: 600;"
-                                   oninput="calcularTotal()">
-                            <span id="discountSymbol" style="font-size: 20px; font-weight: 700; color: #744210; min-width: 30px; text-align: center;">%</span>
-                        </div>
-                        
-                        <div id="discountValueDisplay" style="margin-top: 8px; text-align: right; font-size: 13px; color: #e53e3e; display: none;">
-                            Desconto: <strong>R$ 0,00</strong>
-                        </div>
-                    </div>
-                    
-                    <!-- RESUMO DA VENDA -->
-                    <div id="saleResumo" style="display:none; background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <table style="width: 100%; font-size: 14px;">
-                            <tr><td style="color: #718096; padding: 3px 0;">Subtotal:</td>
-                                <td style="text-align: right;" id="resumoSubtotal">R$ 0,00</td>
-                            </tr>
-                            <tr><td style="color: #718096; padding: 3px 0;">Desconto:</td>
-                                <td style="text-align: right; color: #e53e3e;" id="resumoDesconto">- R$ 0,00</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" style="border-top: 2px solid #e2e8f0; padding-top: 10px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="font-weight: 700; font-size: 16px;">VALOR TOTAL:</span>
-                                        <span id="totalValue" style="font-weight: 700; font-size: 24px; color: #38a169;">R$ 0,00</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="closeModal('saleModal')">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-save"></i> Registrar Venda
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Modal de Meta Mensal -->
-        <div id="goalModal" class="modal">
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header">
-                    <h3><i class="fas fa-bullseye"></i> Meta Mensal</h3>
-                    <button class="modal-close" onclick="closeModal('goalModal')">&times;</button>
-                </div>
-                
-                <form id="goalForm" onsubmit="return salvarMeta(event)">
-                    <input type="hidden" id="goalId">
-                    <div class="form-group">
-                        <label>Mês de Referência *</label>
-                        <input type="month" id="goalMonth" required style="width: 100%; padding: 12px;">
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-dollar-sign"></i> Meta de Faturamento (R$) *</label>
-                        <input type="text" id="goalRevenue" required placeholder="0,00" 
-                               class="money-input" oninput="formatGoalMoney(this)">
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-shopping-cart"></i> Meta de Vendas (Qtd) *</label>
-                        <input type="number" id="goalSales" required min="1" placeholder="30">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
-                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Meta</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
+    // Configurar data e hora atual no campo saleDate
+    const dateInput = document.getElementById('saleDate');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().slice(0, 16);
+    }
     
     // Carregar dados iniciais
     carregarTodosClientes();
@@ -517,48 +244,138 @@ function toggleDiscountType() {
 // ============================================
 
 function calcularTotal() {
-    const qtd = parseInt(document.getElementById('saleQuantity').value) || 0;
-    const valorUnit = parseFloat((document.getElementById('saleUnitValue').value || '0').replace(',', '.')) || 0;
+    const summaryDiv = document.getElementById('saleResumo');
+    if (!summaryDiv) return;
+    
+    if (saleItems.length === 0) {
+        summaryDiv.style.display = 'none';
+        return;
+    }
+    
+    const subtotal = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
     const discountInput = document.getElementById('saleDiscount');
     const discountValue = parseFloat((discountInput.value || '0').replace(',', '.')) || 0;
     const discountType = document.querySelector('input[name="discountType"]:checked')?.value || 'percent';
     
-    const resumoDiv = document.getElementById('saleResumo');
+    let descontoReal = 0;
+    let descontoPercentual = 0;
     
-    if (qtd > 0 && valorUnit > 0) {
-        const subtotal = qtd * valorUnit;
-        let descontoReal = 0;
-        let descontoPercentual = 0;
-        
-        if (discountType === 'percent') {
-            descontoPercentual = Math.min(discountValue, 100);
-            descontoReal = subtotal * (descontoPercentual / 100);
-        } else {
-            descontoReal = Math.min(discountValue, subtotal);
-            descontoPercentual = subtotal > 0 ? (descontoReal / subtotal) * 100 : 0;
-        }
-        
-        const total = subtotal - descontoReal;
-        
-        const discountDisplay = document.getElementById('discountValueDisplay');
-        if (discountDisplay) {
-            discountDisplay.style.display = discountType === 'real' ? 'block' : 'none';
-            discountDisplay.innerHTML = `Desconto: <strong>R$ ${descontoReal.toFixed(2)}</strong> (${descontoPercentual.toFixed(1)}%)`;
-        }
-        
-        resumoDiv.style.display = 'block';
-        document.getElementById('resumoSubtotal').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
-        document.getElementById('resumoDesconto').textContent = '- R$ ' + descontoReal.toFixed(2).replace('.', ',');
-        document.getElementById('totalValue').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
-        
-        const totalEl = document.getElementById('totalValue');
+    if (discountType === 'percent') {
+        descontoPercentual = Math.min(discountValue, 100);
+        descontoReal = subtotal * (descontoPercentual / 100);
+    } else {
+        descontoReal = Math.min(discountValue, subtotal);
+        descontoPercentual = subtotal > 0 ? (descontoReal / subtotal) * 100 : 0;
+    }
+    
+    const total = subtotal - descontoReal;
+    
+    const discountDisplay = document.getElementById('discountValueDisplay');
+    if (discountDisplay) {
+        discountDisplay.style.display = discountType === 'real' ? 'block' : 'none';
+        discountDisplay.innerHTML = `Desconto: <strong>R$ ${descontoReal.toFixed(2)}</strong> (${descontoPercentual.toFixed(1)}%)`;
+    }
+    
+    summaryDiv.style.display = 'block';
+    document.getElementById('resumoSubtotal').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
+    document.getElementById('resumoDesconto').textContent = '- R$ ' + descontoReal.toFixed(2).replace('.', ',');
+    document.getElementById('totalValue').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    
+    const totalEl = document.getElementById('totalValue');
+    if (totalEl) {
         if (total > 500) totalEl.style.color = '#38a169';
         else if (total > 100) totalEl.style.color = '#d69e2e';
         else totalEl.style.color = '#e53e3e';
-        
-    } else {
-        resumoDiv.style.display = 'none';
     }
+}
+
+// ============================================
+// ELEMENTOS DA SACOLA DE COMPRAS
+// ============================================
+
+function adicionarItemSacola() {
+    const productId = document.getElementById('saleProduct').value;
+    const productSearch = document.getElementById('saleProductSearch').value;
+    const quantity = parseInt(document.getElementById('saleQuantity').value) || 0;
+    const unitValue = parseFloat((document.getElementById('saleUnitValue').value || '0').replace(',', '.')) || 0;
+    
+    if (!productId || !productSearch) {
+        alert('Selecione um produto/serviço antes de adicionar!');
+        return;
+    }
+    
+    if (quantity <= 0) {
+        alert('A quantidade deve ser maior que zero!');
+        return;
+    }
+    
+    const existingItem = saleItems.find(item => item.product_id === productId);
+    if (existingItem) {
+        existingItem.quantity += quantity;
+        existingItem.subtotal = existingItem.quantity * existingItem.price;
+    } else {
+        saleItems.push({
+            product_id: productId,
+            product_name: productSearch.split(' - ').slice(1).join(' - ') || productSearch,
+            code: productSearch.split(' - ')[0] || '',
+            price: unitValue,
+            quantity: quantity,
+            subtotal: unitValue * quantity
+        });
+    }
+    
+    document.getElementById('saleProduct').value = '';
+    document.getElementById('saleProductSearch').value = '';
+    document.getElementById('saleQuantity').value = '1';
+    document.getElementById('saleUnitValue').value = '';
+    document.getElementById('productInfo').style.display = 'none';
+    
+    renderSacola();
+    calcularTotal();
+}
+
+function removerItemSacola(index) {
+    saleItems.splice(index, 1);
+    renderSacola();
+    calcularTotal();
+}
+
+function renderSacola() {
+    const container = document.getElementById('sacolaItensContainer');
+    const tbody = document.getElementById('sacolaTableBody');
+    if (!container || !tbody) return;
+    
+    if (saleItems.length === 0) {
+        container.style.display = 'none';
+        tbody.innerHTML = '';
+        return;
+    }
+    
+    container.style.display = 'block';
+    tbody.innerHTML = saleItems.map((item, index) => `
+        <tr>
+            <td style="padding: 8px;"><strong>${item.code}</strong> - ${item.product_name}</td>
+            <td style="padding: 8px; text-align: center;">${item.quantity}</td>
+            <td style="padding: 8px; text-align: right;">R$ ${item.price.toFixed(2).replace('.', ',')}</td>
+            <td style="padding: 8px; text-align: right;"><strong>R$ ${item.subtotal.toFixed(2).replace('.', ',')}</strong></td>
+            <td style="padding: 8px; text-align: center;">
+                <button type="button" class="btn-danger btn-sm" onclick="removerItemSacola(${index})" style="padding: 4px 8px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function limparFormularioVenda() {
+    document.getElementById('saleForm')?.reset();
+    document.getElementById('saleClient').value = '';
+    document.getElementById('saleProduct').value = '';
+    document.getElementById('productInfo').style.display = 'none';
+    document.getElementById('saleResumo').style.display = 'none';
+    document.getElementById('saleDate').value = new Date().toISOString().slice(0, 16);
+    saleItems = [];
+    renderSacola();
 }
 
 // ============================================
@@ -569,22 +386,19 @@ async function salvarVenda(e) {
     e.preventDefault();
     
     const clientId = document.getElementById('saleClient').value;
-    const productId = document.getElementById('saleProduct').value;
-    const quantity = parseInt(document.getElementById('saleQuantity').value);
-    const unitValue = parseFloat((document.getElementById('saleUnitValue').value || '0').replace(',', '.'));
+    const paymentMethod = document.getElementById('salePaymentMethod').value;
+    const saleDate = document.getElementById('saleDate').value;
     const discountValue = parseFloat((document.getElementById('saleDiscount').value || '0').replace(',', '.')) || 0;
     const discountType = document.querySelector('input[name="discountType"]:checked')?.value || 'percent';
-    const saleDate = document.getElementById('saleDate').value;
     
-    // Validações
     if (!clientId) { alert('❌ Selecione um cliente!'); return false; }
-    if (!productId) { alert('❌ Selecione um produto!'); return false; }
-    if (!quantity || quantity < 1) { alert('❌ Quantidade inválida!'); return false; }
-    if (!unitValue || unitValue <= 0) { alert('❌ Valor unitário inválido!'); return false; }
+    if (saleItems.length === 0) { alert('❌ Adicione pelo menos um produto na sacola!'); return false; }
+    if (!paymentMethod) { alert('❌ Selecione a forma de pagamento!'); return false; }
+    if (!saleDate) { alert('❌ Selecione a data da venda!'); return false; }
     
-    const subtotal = quantity * unitValue;
-    let discountPercent = 0;
+    const subtotal = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
     let discountReal = 0;
+    let discountPercent = 0;
     
     if (discountType === 'percent') {
         discountPercent = Math.min(discountValue, 100);
@@ -595,13 +409,13 @@ async function salvarVenda(e) {
     }
     
     const totalValue = subtotal - discountReal;
-    
     if (totalValue < 0) { alert('❌ O desconto não pode ser maior que o valor total!'); return false; }
     
     const confirmed = confirm(
-        `📋 CONFIRMAR VENDA\n\n` +
+        `📋 CONFIRMAR VENDA MULTI-ITENS\n\n` +
         `Cliente: ${document.getElementById('saleClientSearch').value.split(' - ')[0]}\n` +
-        `Produto: ${document.getElementById('saleProductSearch').value}\n` +
+        `Itens na sacola: ${saleItems.length}\n` +
+        `Forma de Pagto.: ${paymentMethod}\n` +
         `Data: ${new Date(saleDate).toLocaleString('pt-BR')}\n\n` +
         `Subtotal: R$ ${subtotal.toFixed(2)}\n` +
         `Desconto: R$ ${discountReal.toFixed(2)} (${discountPercent.toFixed(1)}%)\n` +
@@ -611,31 +425,55 @@ async function salvarVenda(e) {
     
     if (!confirmed) return false;
     
+    const discountRatio = subtotal > 0 ? discountReal / subtotal : 0;
+    
+    const salesToInsert = saleItems.map(item => {
+        const itemSubtotal = item.price * item.quantity;
+        const itemDiscountReal = itemSubtotal * discountRatio;
+        const itemDiscountPercent = itemSubtotal > 0 ? (itemDiscountReal / itemSubtotal) * 100 : 0;
+        const itemTotalValue = itemSubtotal - itemDiscountReal;
+        
+        return {
+            client_id: clientId,
+            product_id: item.product_id,
+            value: item.price,
+            quantity: item.quantity,
+            discount_percent: parseFloat(itemDiscountPercent.toFixed(2)),
+            discount_value: parseFloat(itemDiscountReal.toFixed(2)),
+            total_value: parseFloat(itemTotalValue.toFixed(2)),
+            sale_date: saleDate.split('T')[0],
+            forma_pagamento: paymentMethod,
+            created_at: new Date().toISOString()
+        };
+    });
+    
     try {
+        const submitBtn = document.querySelector('#saleForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+        }
+        
         const { error } = await supabaseClient
             .from('sales')
-            .insert({
-                client_id: clientId,
-                product_id: productId,
-                value: unitValue,
-                quantity: quantity,
-                discount_percent: parseFloat(discountPercent.toFixed(2)),
-                discount_value: parseFloat(discountReal.toFixed(2)),
-                total_value: parseFloat(totalValue.toFixed(2)),
-                sale_date: saleDate,
-                created_at: new Date().toISOString()
-            });
+            .insert(salesToInsert);
         
         if (error) throw error;
         
         alert('✅ Venda registrada com sucesso!');
-        closeModal('saleModal');
+        limparFormularioVenda();
         carregarVendas();
         carregarMetaAtual();
         
     } catch (error) {
         console.error('Erro ao salvar:', error);
         alert('Erro ao registrar venda: ' + error.message);
+    } finally {
+        const submitBtn = document.querySelector('#saleForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Registrar Venda';
+        }
     }
     
     return false;
@@ -657,8 +495,8 @@ async function carregarVendas() {
         
         // Aplicar filtro de data
         if (currentDateFilter === 'custom' && customStartDate && customEndDate) {
-            query = query.gte('sale_date', `${customStartDate}T00:00:00`)
-                         .lte('sale_date', `${customEndDate}T23:59:59`);
+            query = query.gte('sale_date', customStartDate)
+                         .lte('sale_date', customEndDate);
         } else if (currentDateFilter !== 'all') {
             const { startDate, endDate } = getDateRange(currentDateFilter);
             query = query.gte('sale_date', startDate.split('T')[0])
@@ -681,7 +519,7 @@ async function carregarVendas() {
         }
         
         if (vendas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;">
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px;">
                 <i class="fas fa-shopping-cart" style="font-size:48px; color:#cbd5e0;"></i>
                 <p style="color:#718096; margin-top:15px;">Nenhuma venda encontrada</p>
             </td></tr>`;
@@ -707,6 +545,7 @@ async function carregarVendas() {
                 <td style="color: ${desconto > 0 ? '#e53e3e' : '#718096'};">
                     ${desconto > 0 ? '- R$ ' + desconto.toFixed(2) + ' (' + (v.discount_percent || 0).toFixed(1) + '%)' : '-'}
                 </td>
+                <td><span style="background: rgba(91, 192, 190, 0.2); color: var(--tropical-teal); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 12px;">${v.forma_pagamento || 'N/A'}</span></td>
                 <td><strong>R$ ${total.toFixed(2)}</strong></td>
                 <td>
                     <button class="btn-danger btn-sm" onclick="excluirVenda('${v.id}')">
@@ -841,12 +680,14 @@ async function carregarMetaAtual() {
 // ============================================
 
 function showSaleModal() {
-    const modal = document.getElementById('saleModal');
-    if (!modal) return;
-    
-    modal.classList.add('show');
-    
-    // Resetar formulário
+    const searchInput = document.getElementById('saleClientSearch');
+    if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function limparFormularioVenda() {
     const form = document.getElementById('saleForm');
     if (form) form.reset();
     
@@ -858,19 +699,47 @@ function showSaleModal() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     
-    document.getElementById('saleDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
-    document.getElementById('saleQuantity').value = '1';
-    document.getElementById('saleDiscount').value = '0,00';
-    document.querySelector('input[name="discountType"][value="percent"]').checked = true;
-    document.getElementById('discountSymbol').textContent = '%';
-    document.getElementById('discountValueDisplay').style.display = 'none';
-    document.getElementById('productInfo').style.display = 'none';
-    document.getElementById('saleResumo').style.display = 'none';
-    document.getElementById('saleClientSearch').value = '';
-    document.getElementById('saleProductSearch').value = '';
-    document.getElementById('saleClient').value = '';
-    document.getElementById('saleProduct').value = '';
-    document.getElementById('saleUnitValue').value = '';
+    const dateInput = document.getElementById('saleDate');
+    if (dateInput) dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    const qtyInput = document.getElementById('saleQuantity');
+    if (qtyInput) qtyInput.value = '1';
+    
+    const discInput = document.getElementById('saleDiscount');
+    if (discInput) discInput.value = '0,00';
+    
+    const discTypePercent = document.querySelector('input[name="discountType"][value="percent"]');
+    if (discTypePercent) discTypePercent.checked = true;
+    
+    const discSymbol = document.getElementById('discountSymbol');
+    if (discSymbol) discSymbol.textContent = '%';
+    
+    const discDisplay = document.getElementById('discountValueDisplay');
+    if (discDisplay) discDisplay.style.display = 'none';
+    
+    const prodInfo = document.getElementById('productInfo');
+    if (prodInfo) prodInfo.style.display = 'none';
+    
+    const saleResumo = document.getElementById('saleResumo');
+    if (saleResumo) saleResumo.style.display = 'none';
+    
+    const clientSearch = document.getElementById('saleClientSearch');
+    if (clientSearch) clientSearch.value = '';
+    
+    const prodSearch = document.getElementById('saleProductSearch');
+    if (prodSearch) prodSearch.value = '';
+    
+    const clientHidden = document.getElementById('saleClient');
+    if (clientHidden) clientHidden.value = '';
+    
+    const prodHidden = document.getElementById('saleProduct');
+    if (prodHidden) prodHidden.value = '';
+    
+    const unitVal = document.getElementById('saleUnitValue');
+    if (unitVal) unitVal.value = '';
+    
+    const paymentMethod = document.getElementById('salePaymentMethod');
+    if (paymentMethod) paymentMethod.value = '';
     
     const clientesLista = document.getElementById('clientesLista');
     const produtosLista = document.getElementById('produtosLista');
@@ -941,7 +810,6 @@ document.addEventListener('click', function(e) {
 
 // Exportar funções globais
 window.loadSales = loadSales;
-window.showSaleModal = showSaleModal;
 window.showGoalModal = showGoalModal;
 window.closeModal = closeModal;
 window.calcularTotal = calcularTotal;
@@ -955,5 +823,16 @@ window.filtrarProdutos = filtrarProdutos;
 window.mostrarListaClientes = mostrarListaClientes;
 window.mostrarListaProdutos = mostrarListaProdutos;
 window.aplicarFiltroPersonalizado = aplicarFiltroPersonalizado;
+window.limparFormularioVenda = limparFormularioVenda;
+window.adicionarItemSacola = adicionarItemSacola;
+window.removerItemSacola = removerItemSacola;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('salesTableBody')) {
+        setTimeout(() => {
+            loadSales();
+        }, 300);
+    }
+});
 
 console.log('✅ Módulo de Vendas carregado!');

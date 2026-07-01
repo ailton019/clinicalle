@@ -14,183 +14,21 @@ let charts = {
 };
 let currentPeriod = 'month';
 let refreshInterval = null;
+let customStartDate = null;
+let customEndDate = null;
 
 /**
  * Carrega a página de dashboard
  */
 async function loadDashboard() {
-    const contentArea = document.getElementById('contentArea');
-    if (!contentArea) return;
+    console.log('📊 loadDashboard() chamada!');
     
     const pageTitle = document.getElementById('pageTitle');
     if (pageTitle) pageTitle.textContent = 'Dashboard';
     
-    contentArea.innerHTML = `
-        <div class="dashboard-container">
-            <!-- Cards de Estatísticas Principais -->
-            <div class="stats-grid">
-                <div class="stat-card primary">
-                    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                    <div class="stat-value" id="totalRevenue">R$ 0,00</div>
-                    <div class="stat-label">Faturamento Bruto</div>
-                    <div class="stat-change" id="revenueChange"></div>
-                </div>
-                
-                <div class="stat-card danger">
-                    <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
-                    <div class="stat-value" id="totalExpenses">R$ 0,00</div>
-                    <div class="stat-label">Total de Despesas</div>
-                    <div class="stat-change" id="expensesChange"></div>
-                </div>
-                
-                <div class="stat-card success">
-                    <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
-                    <div class="stat-value" id="netProfit">R$ 0,00</div>
-                    <div class="stat-label">Lucro Líquido</div>
-                    <div class="stat-change" id="profitChange"></div>
-                </div>
-                
-                <div class="stat-card warning">
-                    <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
-                    <div class="stat-value" id="dashMeta">R$ 0,00</div>
-                    <div class="stat-label">Meta do Mês</div>
-                    <div id="dashMetaProgress" style="margin-top: 8px;"></div>
-                </div>
-                
-                <div class="stat-card info">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-value" id="totalClients">0</div>
-                    <div class="stat-label">Clientes Ativos</div>
-                    <div class="stat-change" id="clientsChange"></div>
-                </div>
-                
-                <div class="stat-card purple">
-                    <div class="stat-icon"><i class="fas fa-box"></i></div>
-                    <div class="stat-value" id="totalProducts">0</div>
-                    <div class="stat-label">Produtos em Estoque</div>
-                    <div class="stat-change" id="productsChange"></div>
-                </div>
-            </div>
-            
-            <!-- Filtros de Período -->
-            <div class="filters-bar">
-                <button class="filter-btn ${currentPeriod === 'today' ? 'active' : ''}" data-period="today">
-                    <i class="fas fa-calendar-day"></i> Hoje
-                </button>
-                <button class="filter-btn ${currentPeriod === '7days' ? 'active' : ''}" data-period="7days">
-                    <i class="fas fa-calendar-week"></i> Últimos 7 dias
-                </button>
-                <button class="filter-btn ${currentPeriod === '30days' ? 'active' : ''}" data-period="30days">
-                    <i class="fas fa-calendar-alt"></i> Últimos 30 dias
-                </button>
-                <button class="filter-btn ${currentPeriod === 'month' ? 'active' : ''}" data-period="month">
-                    <i class="fas fa-calendar-month"></i> Mês Atual
-                </button>
-                <button class="filter-btn ${currentPeriod === 'year' ? 'active' : ''}" data-period="year">
-                    <i class="fas fa-calendar-year"></i> Ano Atual
-                </button>
-            </div>
-            
-            <!-- Gráficos -->
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-line"></i> Receitas por Mês</h3>
-                        <button class="chart-action" onclick="exportChart('revenue')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                    <canvas id="revenueChart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-line"></i> Despesas por Mês</h3>
-                        <button class="chart-action" onclick="exportChart('expenses')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                    <canvas id="expensesChart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-line"></i> Lucro por Mês</h3>
-                        <button class="chart-action" onclick="exportChart('profit')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                    <canvas id="profitChart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-bar"></i> Comparativo Receita x Despesa</h3>
-                        <button class="chart-action" onclick="exportChart('comparison')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                    <canvas id="comparisonChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Cards de Indicadores Adicionais -->
-            <div class="indicators-grid">
-                <div class="indicator-card">
-                    <div class="indicator-icon"><i class="fas fa-chart-pie"></i></div>
-                    <div class="indicator-info">
-                        <div class="indicator-label">Margem de Lucro</div>
-                        <div class="indicator-value" id="profitMargin">0%</div>
-                    </div>
-                </div>
-                
-                <div class="indicator-card">
-                    <div class="indicator-icon"><i class="fas fa-percent"></i></div>
-                    <div class="indicator-info">
-                        <div class="indicator-label">Percentual de Despesas</div>
-                        <div class="indicator-value" id="expensePercentage">0%</div>
-                    </div>
-                </div>
-                
-                <div class="indicator-card">
-                    <div class="indicator-icon"><i class="fas fa-ticket-alt"></i></div>
-                    <div class="indicator-info">
-                        <div class="indicator-label">Ticket Médio</div>
-                        <div class="indicator-value" id="averageTicket">R$ 0,00</div>
-                    </div>
-                </div>
-                
-                <div class="indicator-card">
-                    <div class="indicator-icon"><i class="fas fa-hand-holding-usd"></i></div>
-                    <div class="indicator-info">
-                        <div class="indicator-label">Lucro por Cliente</div>
-                        <div class="indicator-value" id="profitPerClient">R$ 0,00</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Últimas Vendas -->
-            <div class="recent-activities">
-                <div class="section-header">
-                    <h3><i class="fas fa-clock"></i> Últimas Vendas</h3>
-                    <a href="#" onclick="navigateTo('sales'); return false;" class="view-all">
-                        Ver todas <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="activities-list" id="recentSales">
-                    <div class="loading-spinner-small">
-                        <i class="fas fa-spinner fa-pulse"></i> Carregando...
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
     addDashboardStyles();
     
-    // Aguardar DOM
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    // Carregar dados
     await updateDashboard(currentPeriod);
     
     // Eventos dos filtros
@@ -199,12 +37,25 @@ async function loadDashboard() {
             currentPeriod = e.currentTarget.dataset.period;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             e.currentTarget.classList.add('active');
-            await updateDashboard(currentPeriod);
+            
+            // Mostrar/esconder filtro personalizado
+            const customFilter = document.getElementById('customDateFilter');
+            if (customFilter) {
+                customFilter.style.display = currentPeriod === 'custom' ? 'flex' : 'none';
+            }
+            
+            if (currentPeriod !== 'custom') {
+                await updateDashboard(currentPeriod);
+            }
         });
     });
     
     if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => updateDashboard(currentPeriod), 30000);
+    refreshInterval = setInterval(() => {
+        if (currentPeriod !== 'custom') {
+            updateDashboard(currentPeriod);
+        }
+    }, 30000);
 }
 
 function addDashboardStyles() {
@@ -261,6 +112,9 @@ function addDashboardStyles() {
         body.dark-mode .filter-btn { background: #374151; border-color: #4b5563; color: #f9fafb; }
         body.dark-mode .filter-btn:hover { background: #4b5563; }
         body.dark-mode .activity-item:hover { background: #374151; }
+        body.dark-mode #customDateFilter { background: #1f2937 !important; box-shadow: none !important; }
+        body.dark-mode #customDateFilter label { color: #9ca3af !important; }
+        body.dark-mode #customDateFilter input { background: #374151 !important; color: white !important; border-color: #4b5563 !important; }
         
         @media (max-width: 768px) {
             .charts-grid { grid-template-columns: 1fr; }
@@ -520,7 +374,7 @@ async function loadMonthlyGoal() {
                 `;
             } else {
                 metaElement.textContent = formatCurrency(0);
-                progressElement.innerHTML = `<span style="color:#3182ce;cursor:pointer;" onclick="showGoalModal?.()">📌 Clique para definir meta</span>`;
+                progressElement.innerHTML = `<span style="color:#718096; font-size:12px;">Sem meta definida para este mês</span>`;
             }
         }
     } catch (error) {
@@ -641,9 +495,20 @@ function getDateRange(period) {
         case '30days': startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); endDate = now; break;
         case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = now; break;
         case 'year': startDate = new Date(now.getFullYear(), 0, 1); endDate = now; break;
+        case 'custom':
+            if (customStartDate && customEndDate) {
+                return { 
+                    startDate: `${customStartDate}T00:00:00.000Z`, 
+                    endDate: `${customEndDate}T23:59:59.000Z` 
+                };
+            }
+            // Fallback if not selected
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = now;
+            break;
         default: startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = now;
     }
-    return { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+    return { startDate: typeof startDate === 'string' ? startDate : startDate.toISOString(), endDate: typeof endDate === 'string' ? endDate : endDate.toISOString() };
 }
 
 function getMonthsInRange(startDate, endDate) {
@@ -673,8 +538,31 @@ function formatCurrency(value) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 }
 
+async function aplicarFiltroPersonalizadoDash() {
+    const startDate = document.getElementById('customStartDate').value;
+    const endDate = document.getElementById('customEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Selecione as datas de início e fim');
+        return;
+    }
+    
+    customStartDate = startDate;
+    customEndDate = endDate;
+    await updateDashboard('custom');
+}
+
 window.loadDashboard = loadDashboard;
 window.updateDashboard = updateDashboard;
 window.exportChart = exportChart;
+window.aplicarFiltroPersonalizadoDash = aplicarFiltroPersonalizadoDash;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('revenueChart')) {
+        setTimeout(() => {
+            loadDashboard();
+        }, 300);
+    }
+});
 
 console.log('✅ Dashboard carregado!');
